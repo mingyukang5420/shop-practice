@@ -18,6 +18,8 @@ import com.skala.shop.dto.order.OrderSummaryResponse;
 import com.skala.shop.exception.BusinessException;
 import com.skala.shop.exception.ErrorCode;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 public class OrderService {
+
+	private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
 	private final OrderRepository orderRepository;
 	private final CartItemRepository cartItemRepository;
@@ -76,6 +80,7 @@ public class OrderService {
 		orderRepository.save(order);
 		cartItemRepository.deleteAll(targets);
 
+		log.info("주문 생성: memberId={}, orderId={}, totalPrice={}", memberId, order.getId(), totalOrderPrice);
 		return toResponse(order);
 	}
 
@@ -110,6 +115,7 @@ public class OrderService {
 		member.refundPoint(order.getTotalPrice());
 		order.cancel();
 
+		log.info("주문 취소: memberId={}, orderId={}, refundPoint={}", memberId, orderId, order.getTotalPrice());
 		return toResponse(order);
 	}
 

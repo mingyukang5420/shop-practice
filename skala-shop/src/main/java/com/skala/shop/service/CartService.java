@@ -15,12 +15,16 @@ import com.skala.shop.dto.cart.CartResponse;
 import com.skala.shop.exception.BusinessException;
 import com.skala.shop.exception.ErrorCode;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true)
 public class CartService {
+
+	private static final Logger log = LoggerFactory.getLogger(CartService.class);
 
 	private final CartItemRepository cartItemRepository;
 	private final BookRepository bookRepository;
@@ -53,6 +57,7 @@ public class CartService {
 			cartItem.increaseQuantity(request.quantity());
 		}
 
+		log.info("장바구니 담기: memberId={}, bookId={}, quantity={}", memberId, request.bookId(), combinedQuantity);
 		return toResponse(cartItem, book);
 	}
 
@@ -71,12 +76,14 @@ public class CartService {
 		CartItem cartItem = getOwnedCartItem(memberId, itemId);
 		validateStock(cartItem.getBook(), request.quantity());
 		cartItem.changeQuantity(request.quantity());
+		log.info("장바구니 수량 수정: memberId={}, itemId={}, quantity={}", memberId, itemId, request.quantity());
 		return toResponse(cartItem, cartItem.getBook());
 	}
 
 	@Transactional
 	public void remove(Long memberId, Long itemId) {
 		cartItemRepository.delete(getOwnedCartItem(memberId, itemId));
+		log.info("장바구니 항목 삭제: memberId={}, itemId={}", memberId, itemId);
 	}
 
 	private void validateStock(Book book, int requestedQuantity) {

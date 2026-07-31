@@ -24,6 +24,9 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
+	// spring-boot-starter-security(전체 필터체인)는 추가하지 않는다 - 추가 시 모든 API가 기본 잠금되므로
+	// 비밀번호 해시(BCrypt)만 필요한 이 프로젝트는 spring-security-crypto만 가볍게 사용한다.
+	implementation 'org.springframework.security:spring-security-crypto'
 	compileOnly 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'com.h2database:h2'

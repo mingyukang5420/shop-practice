@@ -1,4 +1,6 @@
-package com.skala.skala_shop.domain;
+package com.skala.shop.domain.book;
+
+import com.skala.shop.domain.BaseTimeEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

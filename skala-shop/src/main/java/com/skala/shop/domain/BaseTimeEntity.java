@@ -1,4 +1,4 @@
-package com.skala.skala_shop.domain;
+package com.skala.shop.domain;
 
 import java.time.LocalDateTime;
 

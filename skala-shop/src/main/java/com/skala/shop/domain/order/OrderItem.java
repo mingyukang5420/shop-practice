@@ -1,4 +1,6 @@
-package com.skala.skala_shop.domain;
+package com.skala.shop.domain.order;
+
+import com.skala.shop.domain.book.Book;
 
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;

@@ -1,4 +1,7 @@
-package com.skala.skala_shop.domain;
+package com.skala.shop.domain.cart;
+
+import com.skala.shop.domain.book.Book;
+import com.skala.shop.domain.member.Member;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;

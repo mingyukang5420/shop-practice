@@ -1,6 +1,10 @@
-package com.skala.skala_shop.domain;
+package com.skala.shop.domain.book;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
+import com.skala.shop.domain.member.Member;
+import com.skala.shop.domain.order.Order;
+import com.skala.shop.domain.order.OrderItem;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

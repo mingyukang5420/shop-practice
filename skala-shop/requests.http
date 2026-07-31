@@ -253,17 +253,18 @@ Content-Type: application/json
   "password": "password123"
 }
 
-### 3) 재고 한도 내에서 고가 도서 두 종을 담아 합계(1,140,000원)가 초기 포인트(1,000,000원)를 초과하도록 구성
-### 클린 코드(id=1, 30000원 x 재고 20권 = 600,000원)
+### 3) 재고 한도 내에서 고가 도서 두 종을 담아 합계가 초기 포인트(1,000,000원)를 초과하도록 구성
+### 클린 코드(id=1)는 위 "도서 수정" 데모로 가격 32000원/재고 18권으로 바뀌었고, 이후 주문 1건(2권)에
+### 소비되어 이 시점 재고는 16권이다: 32000원 x 16권 = 512,000원
 POST http://localhost:8080/api/cart/items
 Content-Type: application/json
 
 {
   "bookId": 1,
-  "quantity": 20
+  "quantity": 16
 }
 
-### 이펙티브 자바(id=2, 36000원 x 재고 15권 = 540,000원) - 합계 1,140,000원
+### 이펙티브 자바(id=2, 아직 주문에 쓰이지 않아 재고 15권 그대로) - 36000원 x 15권 = 540,000원, 합계 1,052,000원
 POST http://localhost:8080/api/cart/items
 Content-Type: application/json
 

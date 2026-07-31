@@ -1,13 +1,43 @@
 # API명세서 (MVP)
 
-버전: v1 (MVP)
+버전: v1.1
 상태: 확정
 기반 문서: 설계_v3(확정, Auth 섹션 제외), 요구사항명세서.md, 기능명세서.md
+
+> **v1.1 갱신**: 12~13단계(작업순서.md)에서 세션 기반 인증(Auth API), Cart/Order API의 세션 인증 전환, 주문 취소·포인트 검증을 도입했다. 기존 "인증 없음" 전제와 관련된 서술을 모두 갱신했다.
+
+## 0. Auth(Member) API (v1.1 신규)
+
+인증/인가는 REQ-001~003에서 최초 MVP는 제외했으나, v1.1에서 세션(HttpSession) 기반으로 부분 도입했다(JWT 아님). 로그인 성공 시 서버가 `Set-Cookie: JSESSIONID=...`를 발급하며, 이후 Cart/Order API 요청은 이 세션 쿠키를 그대로 전달해야 한다.
+
+| Method | URL | 설명 | 성공 코드 |
+| --- | --- | --- | --- |
+| POST | /api/members | 회원가입 | 201 |
+| POST | /api/members/login | 로그인(세션 쿠키 발급) | 200 |
+| POST | /api/members/logout | 로그아웃(세션 무효화) | 204 |
+
+**POST /api/members**
+
+- Request: `{ "loginId": "string", "password": "string", "name": "string" }`
+- Response: `{ memberId, loginId, name, point }`, 201 (`point`는 가입 시 지급되는 초기 포인트 1,000,000)
+- 에러: 400 `VALIDATION_ERROR`, 409 `DUPLICATE_LOGIN_ID`
+
+**POST /api/members/login**
+
+- Request: `{ "loginId": "string", "password": "string" }`
+- Response: `{ memberId, loginId, name }`, 200 + `Set-Cookie: JSESSIONID=...`
+- 비고: 응답에는 `point`를 포함하지 않는다(회원가입 시 1회 확인하는 값으로 충분하며, 로그인마다 매번 조회할 필요는 없다고 판단). 현재 보유 포인트를 확인할 별도의 "내 정보 조회" API는 이번 라운드 범위 밖이다
+- 에러: 401 `INVALID_CREDENTIALS`(아이디 또는 비밀번호 불일치)
+
+**POST /api/members/logout**
+
+- Response: 204(본문 없음), 세션 무효화
+- 비고: 세션이 없어도 오류 없이 204를 반환한다
 
 ## 1. 공통 규칙
 
 - Base URL: `/api`
-- **인증: 없음.** MVP의 모든 API는 인증/인가 없이 공개되며, 장바구니·주문 관련 API는 고정 더미 회원(id=1)을 기준으로 동작한다. (설계_v3의 `Authorization: Bearer {AccessToken}` 규칙은 MVP에 적용하지 않는다 — 인증 도입 시 재적용)
+- **인증(v1.1)**: Book API와 Admin API는 인증 없이 공개된다. **Cart API와 Order API는 세션 인증이 필요**하며, 로그인 후 발급된 세션 쿠키(`JSESSIONID`)가 없으면 401 `UNAUTHORIZED`를 반환한다. (최초 MVP 전제였던 "인증 없음, 고정 더미 회원(id=1) 기준"은 v1.1부터 로그인 회원 기준으로 대체됨)
 - 응답: 성공 시 리소스를 직접 반환(불필요한 래핑 없음), 실패 시 아래 공통 에러 포맷 사용
 
 ```json
@@ -21,8 +51,7 @@
 ```
 
 - 목록 조회 페이징(Spring Data 방식): 요청 `?page=0&size=20&sort=createdAt,desc`, 응답 `{ content, page, size, totalElements, totalPages }`
-- 상태 코드: 200(조회/수정), 201(생성), 204(삭제), 400(검증 실패), 404(리소스 없음), 409(충돌, 재고부족 등)
-  - 401/403은 인증이 없는 MVP에서는 사용하지 않는다(추후 인증 도입 시 재적용)
+- 상태 코드: 200(조회/수정), 201(생성), 204(삭제), 400(검증 실패), 401(미인증, v1.1부터 Cart/Order API에 적용), 404(리소스 없음), 409(충돌, 재고부족·포인트부족 등)
 
 ## 2. Book API
 
@@ -63,7 +92,7 @@
 
 ## 3. Cart API
 
-전제: 모든 요청은 고정 더미 회원(id=1)을 기준으로 처리된다(인증 헤더 불필요).
+전제(v1.1): 모든 요청은 **세션 인증된 로그인 회원**을 기준으로 처리된다. 로그인(`POST /api/members/login`)으로 발급된 세션 쿠키가 없으면 401 `UNAUTHORIZED`를 반환한다. (최초 MVP 전제였던 "고정 더미 회원(id=1), 인증 헤더 불필요"는 대체됨 — 더미 회원 `dummy`/`dummy1234`로 로그인하면 이전과 동일하게 동작한다)
 
 | Method | URL | 설명 | 성공 코드 |
 | --- | --- | --- | --- |
@@ -77,47 +106,59 @@
 - Request: `{ "bookId": 1, "quantity": 2 }`
 - Response: `{ itemId, bookId, title, price, quantity, stock }`, 201
 - 처리 규칙: 동일 `bookId`가 이미 장바구니에 있으면 **수량을 합산**하여 갱신(신규 행 생성 아님). 합산된 총수량이 현재 재고를 초과하면 실패(기능명세서 3.1 참조)
-- 에러: 404 `BOOK_NOT_FOUND`, 409 `INSUFFICIENT_STOCK`
+- 에러: 401 `UNAUTHORIZED`, 404 `BOOK_NOT_FOUND`, 409 `INSUFFICIENT_STOCK`
 
 **GET /api/cart**
 
 - Response: `{ items: [{ itemId, bookId, title, price, quantity, stock }], totalPrice }`
 - 비고: `price`/`stock`은 항상 최신 도서 값(주문 전이므로 스냅샷 아님)
+- 에러: 401 `UNAUTHORIZED`
 
 **PATCH /api/cart/items/{itemId}**
 
 - Request: `{ "quantity": 3 }`
 - Response: `{ itemId, bookId, title, price, quantity, stock }`, 200
-- 에러: 404 `CART_ITEM_NOT_FOUND`, 409 `INSUFFICIENT_STOCK`
+- 에러: 401 `UNAUTHORIZED`, 404 `CART_ITEM_NOT_FOUND`, 409 `INSUFFICIENT_STOCK`
 
 **DELETE /api/cart/items/{itemId}**
 
 - Response: 204
-- 에러: 404 `CART_ITEM_NOT_FOUND`
+- 에러: 401 `UNAUTHORIZED`, 404 `CART_ITEM_NOT_FOUND`
 
 ## 4. Order API
 
+전제(v1.1): 아래 세 엔드포인트는 **세션 인증된 로그인 회원**을 기준으로 동작한다(미인증 시 401 `UNAUTHORIZED`). Admin API(5절)는 이전과 동일하게 인증 없이 공개된다.
+
 | Method | URL | 설명 | 성공 코드 |
 | --- | --- | --- | --- |
-| POST | /api/orders | 장바구니 기반 주문 생성 (재고 차감) | 201 |
+| POST | /api/orders | 장바구니 기반 주문 생성 (재고 차감 + 포인트 차감) | 201 |
 | GET | /api/orders | 내 주문 목록 조회 | 200 |
 | GET | /api/orders/{id} | 내 주문 상세 조회 | 200 |
+| POST | /api/orders/{id}/cancel | 주문 취소 (재고 복구 + 포인트 환급) | 200 |
 
 **POST /api/orders**
 
 - Request: 없음(현재 장바구니 전체를 주문으로 전환) 또는 `{ "cartItemIds": [1,2] }`(일부 주문 시)
 - Response: `{ orderId, status: "주문완료", totalPrice, items: [{ bookId, title, price, quantity, subtotal }], orderedAt }`, 201
-- 에러: 400 `INVALID_REQUEST`(대상 항목 없음), 409 `INSUFFICIENT_STOCK`(재고 부족 항목이 있으면 전체 주문 실패, 트랜잭션 롤백 — 부분 성공 없음)
-- 부수 효과: 성공 시 각 대상 도서의 재고가 차감되고, 주문으로 전환된 장바구니 항목은 삭제된다
+- 에러: 401 `UNAUTHORIZED`, 400 `INVALID_REQUEST`(대상 항목 없음), 409 `INSUFFICIENT_STOCK`(재고 부족, 트랜잭션 롤백), 409 `INSUFFICIENT_POINT`(포인트 부족, 트랜잭션 롤백, v1.1) — 부분 성공 없음
+- 부수 효과: 성공 시 각 대상 도서의 재고가 차감되고, 회원의 포인트가 총액만큼 차감되며, 주문으로 전환된 장바구니 항목은 삭제된다(v1.1: 포인트 차감 추가)
 
 **GET /api/orders?page=&size=&sort=**
 
 - Response: `{ content: [{ orderId, status, totalPrice, orderedAt }], page, size, totalElements, totalPages }`
+- 에러: 401 `UNAUTHORIZED`
 
 **GET /api/orders/{id}**
 
 - Response: POST 응답과 동일 상세 스키마
-- 에러: 404 `ORDER_NOT_FOUND`
+- 에러: 401 `UNAUTHORIZED`, 404 `ORDER_NOT_FOUND`
+
+**POST /api/orders/{id}/cancel** (v1.1 신규)
+
+- Request: 없음
+- Response: 취소 후 상태(`status: "주문취소"`)가 반영된 주문 상세(POST /api/orders와 동일 스키마), 200
+- 처리 규칙: 주문에 포함된 각 도서의 재고를 주문 수량만큼 복구하고(단, 이미 삭제된 도서는 제외), 회원 포인트에 `totalPrice`만큼 환급한다. 주문 단위 전체 취소만 지원(항목 단위 부분 취소 없음)
+- 에러: 401 `UNAUTHORIZED`, 404 `ORDER_NOT_FOUND`(본인 주문이 아니거나 존재하지 않음), 409 `ORDER_ALREADY_CANCELED`(이미 취소된 주문)
 
 ## 5. Admin API
 
@@ -127,7 +168,7 @@
 | GET | /api/admin/orders/{id} | 주문 상세 조회 (회원 필터 없음) | 200 |
 
 - 응답 스키마는 Order API와 동일
-- 비고: MVP는 인증이 없어 `/api/orders`와 실질적 접근 차이가 없지만, **엔드포인트를 별도로 유지**한다. 추후 인증 도입 시 이 두 엔드포인트에만 ADMIN 권한 검사를 추가하면 되도록 하기 위함(기능명세서 4.3 참조)
+- 비고: v1.1에서 Cart/Order API에 세션 인증이 도입된 이후에도 Admin API는 그대로 인증 없이 공개 상태를 유지한다. **엔드포인트를 별도로 유지**하여, 추후 관리자 권한 체계 도입 시 이 두 엔드포인트에만 ADMIN 권한 검사를 추가하면 되도록 하기 위함(기능명세서 4.3 참조)
 - 에러: 404 `ORDER_NOT_FOUND`
 
 ## 6. 에러 코드 전체 목록
@@ -137,8 +178,13 @@
 | BOOK_NOT_FOUND | 404 | 존재하지 않는 도서 id 조회/수정/삭제 |
 | CATEGORY_NOT_FOUND | 404 | 존재하지 않는 categoryId로 도서 등록/수정 |
 | CART_ITEM_NOT_FOUND | 404 | 존재하지 않는 장바구니 항목 수정/삭제 |
-| ORDER_NOT_FOUND | 404 | 존재하지 않는 주문 조회 |
+| ORDER_NOT_FOUND | 404 | 존재하지 않는 주문 조회/취소 |
+| ORDER_ALREADY_CANCELED | 409 | 이미 취소된 주문을 재취소 시도(v1.1) |
 | INSUFFICIENT_STOCK | 409 | 요청 수량이 현재 재고를 초과(장바구니 담기/수정/주문 생성) |
+| INSUFFICIENT_POINT | 409 | 주문 생성 시 총액이 보유 포인트를 초과(v1.1) |
+| DUPLICATE_LOGIN_ID | 409 | 이미 사용 중인 아이디로 회원가입 시도(v1.1) |
+| INVALID_CREDENTIALS | 401 | 로그인 시 아이디 또는 비밀번호 불일치(v1.1) |
+| UNAUTHORIZED | 401 | 세션 인증 없이 Cart/Order API 호출(v1.1) |
 | INVALID_REQUEST | 400 | 주문 생성 시 대상 항목이 없는 등 비즈니스 규칙 위반 |
 | VALIDATION_ERROR | 400 | 필수값 누락, 형식/범위 오류(Bean Validation 실패) |
 
@@ -182,4 +228,4 @@
 
 - H2 인메모리 DB도 `PESSIMISTIC_WRITE`/`FOR UPDATE`를 지원하지만, 운영 DB(PostgreSQL/MySQL 등) 대비 락 타임아웃·교착 상태 탐지 동작이 단순화되어 있을 수 있어 운영 전환 시 재검증이 필요하다.
 - 단일 프로세스/단일 커넥션 기준 테스트로는 동시성 버그가 은폐되기 쉬우므로, 실제 구현 시 `ExecutorService` 등으로 동시 주문 요청을 시뮬레이션하는 멀티스레드 통합 테스트를 별도로 작성해야 한다.
-- 현재 MVP는 회원이 1명뿐이라 서로 다른 회원 간 동시 경쟁이 실질적으로 발생하지 않는다. 이 설계는 실제 인증·다중 회원 지원이 도입된 이후 구현 우선순위를 재검토한다.
+- v1.1에서 세션 기반 인증이 도입되어 여러 회원이 각자 로그인해 실제로 동시에 주문할 수 있는 환경이 이미 갖춰졌으므로, 서로 다른 회원 간 동시 경쟁이 이제는 실질적으로 발생할 수 있다. 이 설계는 다음 라운드에서 구현 우선순위를 재검토한다.

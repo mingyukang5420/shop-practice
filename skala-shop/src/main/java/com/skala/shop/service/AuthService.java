@@ -4,6 +4,7 @@ import com.skala.shop.domain.member.Member;
 import com.skala.shop.domain.member.MemberRepository;
 import com.skala.shop.dto.member.LoginRequest;
 import com.skala.shop.dto.member.LoginResponse;
+import com.skala.shop.dto.member.MemberResponse;
 import com.skala.shop.dto.member.SignUpRequest;
 import com.skala.shop.dto.member.SignUpResponse;
 import com.skala.shop.exception.BusinessException;
@@ -68,5 +69,12 @@ public class AuthService {
 			session.invalidate();
 			log.info("로그아웃: memberId={}", memberId);
 		}
+	}
+
+	/** 주문/취소로 변동된 현재 시점의 실제 포인트를 조회한다(스냅샷 아님). */
+	public MemberResponse getMyInfo(Long memberId) {
+		Member member = memberRepository.findById(memberId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
+		return MemberResponse.from(member);
 	}
 }

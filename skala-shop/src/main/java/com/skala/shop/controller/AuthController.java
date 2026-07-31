@@ -1,7 +1,9 @@
 package com.skala.shop.controller;
 
+import com.skala.shop.common.LoginMember;
 import com.skala.shop.dto.member.LoginRequest;
 import com.skala.shop.dto.member.LoginResponse;
+import com.skala.shop.dto.member.MemberResponse;
 import com.skala.shop.dto.member.SignUpRequest;
 import com.skala.shop.dto.member.SignUpResponse;
 import com.skala.shop.exception.ErrorResponse;
@@ -10,6 +12,7 @@ import com.skala.shop.service.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,6 +24,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -77,5 +81,19 @@ public class AuthController {
 	public ResponseEntity<Void> logout(HttpServletRequest servletRequest) {
 		authService.logout(servletRequest.getSession(false));
 		return ResponseEntity.noContent().build();
+	}
+
+	@Operation(summary = "내 정보 조회", description = "주문/취소로 변동된 현재 시점의 실제 보유 포인트를 확인한다(스냅샷 아님).")
+	@SecurityRequirement(name = "sessionAuth")
+	@ApiResponses({
+			@ApiResponse(responseCode = "200", description = "조회 성공"),
+			@ApiResponse(responseCode = "401", description = "미인증", content = @Content(
+					mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class),
+					examples = @ExampleObject(value = """
+							{"timestamp":"2026-07-31T09:00:00","status":401,"code":"UNAUTHORIZED","message":"로그인이 필요합니다.","path":"/api/members/me"}""")))
+	})
+	@GetMapping("/me")
+	public ResponseEntity<MemberResponse> me(@LoginMember Long memberId) {
+		return ResponseEntity.ok(authService.getMyInfo(memberId));
 	}
 }

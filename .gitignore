@@ -1,8 +1,11 @@
-# Created by https://www.toptal.com/developers/gitignore/api/macos,visualstudiocode,java
-# Edit at https://www.toptal.com/developers/gitignore?templates=macos,visualstudiocode,java
+# Created by https://www.toptal.com/developers/gitignore/api/macos,visualstudiocode,java,windows
+# Edit at https://www.toptal.com/developers/gitignore?templates=macos,visualstudiocode,java,windows
 
 ### Inner document ###
 *.pdf
+
+### Claude ###
+.claude/
 
 ### Java ###
 # Compiled class file
@@ -82,4 +85,30 @@ Temporary Items
 .history
 .ionide
 
-# End of https://www.toptal.com/developers/gitignore/api/macos,visualstudiocode,java
+### Windows ###
+# Windows thumbnail cache files
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+
+# Dump file
+*.stackdump
+
+# Folder config file
+[Dd]esktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows Installer files
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Windows shortcuts
+*.lnk
+
+# End of https://www.toptal.com/developers/gitignore/api/macos,visualstudiocode,java,windows

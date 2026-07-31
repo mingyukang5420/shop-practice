@@ -6,6 +6,20 @@
 ### 아래 로그인 요청을 먼저 실행하면 이후 요청에 세션이 자동으로 유지된다.
 
 ###
+### 미인증 상태 확인 (아래 Auth API 로그인보다 반드시 먼저 실행할 것 - 로그인 후에는 세션 쿠키가
+### 유지되어 이 401 시나리오를 재현할 수 없음)
+###
+
+### 로그인 없이 담기 시도 (401 UNAUTHORIZED)
+POST http://localhost:8080/api/cart/items
+Content-Type: application/json
+
+{
+  "bookId": 1,
+  "quantity": 1
+}
+
+###
 ### Auth(Member) API (v1.1 신규)
 ###
 
@@ -117,15 +131,6 @@ DELETE http://localhost:8080/api/books/9
 ### Cart API (v1.1: 세션 인증 필요 - 위 로그인 요청을 먼저 실행할 것)
 ###
 
-### 로그인 없이 담기 시도 (401 UNAUTHORIZED)
-POST http://localhost:8080/api/cart/items
-Content-Type: application/json
-
-{
-  "bookId": 1,
-  "quantity": 1
-}
-
 ### 장바구니 담기
 POST http://localhost:8080/api/cart/items
 Content-Type: application/json
@@ -219,16 +224,48 @@ Content-Type: application/json
 }
 
 ### 주문 생성 - 보유 포인트 초과 (409 INSUFFICIENT_POINT, v1.1)
-### 미리 재고가 충분히 큰 도서를 포인트(1,000,000)를 초과하도록 대량 담은 뒤 주문 시도
+### dummy 계정은 위 시나리오들로 포인트가 이미 줄어들었을 수 있으므로, 초기 포인트(1,000,000)가
+### 그대로 남아있는 새 회원으로 가입 후 재현한다.
+
+### 1) 포인트 초과 시나리오 전용 회원가입
+POST http://localhost:8080/api/members
+Content-Type: application/json
+
+{
+  "loginId": "pointtest01",
+  "password": "password123",
+  "name": "포인트테스트"
+}
+
+### 2) 로그인 (세션 쿠키를 이 회원으로 갱신)
+POST http://localhost:8080/api/members/login
+Content-Type: application/json
+
+{
+  "loginId": "pointtest01",
+  "password": "password123"
+}
+
+### 3) 재고 한도 내에서 고가 도서 두 종을 담아 합계(1,140,000원)가 초기 포인트(1,000,000원)를 초과하도록 구성
+### 클린 코드(id=1, 30000원 x 재고 20권 = 600,000원)
+POST http://localhost:8080/api/cart/items
+Content-Type: application/json
+
+{
+  "bookId": 1,
+  "quantity": 20
+}
+
+### 이펙티브 자바(id=2, 36000원 x 재고 15권 = 540,000원) - 합계 1,140,000원
 POST http://localhost:8080/api/cart/items
 Content-Type: application/json
 
 {
   "bookId": 2,
-  "quantity": 100
+  "quantity": 15
 }
 
-###
+### 4) 주문 시도 - 재고는 충분하지만 포인트(1,000,000원)가 부족해 409 INSUFFICIENT_POINT
 POST http://localhost:8080/api/orders
 
 ### 내 주문 목록 조회

@@ -12,3 +12,6 @@ INSERT INTO books (id, title, author, category_id, price, stock, description, cr
   (5, '태백산맥 1', '조정래', 1, 12000, 1, '한국 근현대사를 다룬 대하소설', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
   (6, '여행의 이유', '김영하', 2, 14000, 10, '여행을 소재로 한 에세이', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
   (7, '언어의 온도', '이기주', 2, 13000, 0, '말과 글에 대한 에세이 (품절)', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+-- 명시적 id로 시딩한 뒤에는 IDENTITY 시퀀스가 자동으로 따라오지 않으므로, 이후 API로 생성되는 도서 id가 시딩 데이터와 충돌하지 않도록 재조정한다.
+ALTER TABLE books ALTER COLUMN id RESTART WITH 8;

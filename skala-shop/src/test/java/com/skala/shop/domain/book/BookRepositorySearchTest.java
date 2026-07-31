@@ -7,10 +7,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.test.context.TestPropertySource;
 
 import jakarta.persistence.EntityManager;
 
+/** data.sql 시딩 데이터와 무관하게 자체 픽스처만으로 검증하기 위해 시딩을 끈다(고정 id를 직접 지정하는 테스트라 실데이터와 충돌 방지). */
 @DataJpaTest
+@TestPropertySource(properties = "spring.sql.init.mode=never")
 class BookRepositorySearchTest {
 
 	@Autowired

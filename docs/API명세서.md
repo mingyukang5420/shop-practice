@@ -57,7 +57,7 @@
 }
 ```
 
-- 목록 조회 페이징(Spring Data 방식): 요청 `?page=0&size=20&sort=createdAt,desc`, 응답 `{ content, page, size, totalElements, totalPages }`
+- 목록 조회 페이징(Spring Data 방식): 요청 `?page=0&size=20&sort=createdAt,desc`, 응답 `{ content, page, size, totalElements, totalPages }`. `sort`에 실제 존재하지 않는 필드명을 주면 400 `VALIDATION_ERROR`를 반환한다(v1.1 이전에는 500이었음)
 - 상태 코드: 200(조회/수정), 201(생성), 204(삭제), 400(검증 실패), 401(미인증, v1.1부터 Cart/Order API에 적용), 404(리소스 없음), 409(충돌, 재고부족·포인트부족 등)
 
 ## 2. Book API

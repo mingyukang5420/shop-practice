@@ -69,4 +69,9 @@ public class Book extends BaseTimeEntity {
 	public void decreaseStock(int quantity) {
 		this.stock -= quantity;
 	}
+
+	/** 주문 취소 시 취소된 수량만큼 재고를 복구한다. */
+	public void increaseStock(int quantity) {
+		this.stock += quantity;
+	}
 }

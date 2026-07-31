@@ -9,6 +9,8 @@ import com.skala.shop.dto.member.SignUpResponse;
 import com.skala.shop.exception.BusinessException;
 import com.skala.shop.exception.ErrorCode;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,8 @@ import jakarta.servlet.http.HttpSession;
 @Service
 @Transactional(readOnly = true)
 public class AuthService {
+
+	private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
 	/** 로그인한 회원 id를 세션에 저장할 때 쓰는 attribute 키. JWT 대신 세션(쿠키) 기반으로 로그인 상태를 유지한다. */
 	public static final String SESSION_MEMBER_ID = "MEMBER_ID";
@@ -41,6 +45,8 @@ public class AuthService {
 		Member member = new Member(
 				request.loginId(), passwordEncoder.encode(request.password()), request.name(), INITIAL_POINT);
 		memberRepository.save(member);
+		// 비밀번호 등 민감정보는 절대 로깅하지 않는다. loginId만 남긴다.
+		log.info("회원가입: memberId={}, loginId={}", member.getId(), member.getLoginId());
 		return new SignUpResponse(member.getId(), member.getLoginId(), member.getName(), member.getPoint());
 	}
 
@@ -52,11 +58,14 @@ public class AuthService {
 			throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
 		}
 		session.setAttribute(SESSION_MEMBER_ID, member.getId());
+		log.info("로그인: memberId={}, loginId={}", member.getId(), member.getLoginId());
 		return new LoginResponse(member.getId(), member.getLoginId(), member.getName());
 	}
 
 	public void logout(HttpSession session) {
 		if (session != null) {
+			Object memberId = session.getAttribute(SESSION_MEMBER_ID);
+			log.info("로그아웃: memberId={}", memberId);
 			session.invalidate();
 		}
 	}

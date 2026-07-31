@@ -199,6 +199,15 @@ DELETE http://localhost:8080/api/cart/items/1
 ### Order API (v1.1: 세션 인증 필요)
 ###
 
+### 주문 생성 전 장바구니 준비 (위 Cart API 섹션 마지막에서 항목 1을 삭제해 장바구니가 비어 있음)
+POST http://localhost:8080/api/cart/items
+Content-Type: application/json
+
+{
+  "bookId": 1,
+  "quantity": 2
+}
+
 ### 주문 생성 - 장바구니 전체 (본문 없음, 재고 차감 + 포인트 차감)
 POST http://localhost:8080/api/orders
 

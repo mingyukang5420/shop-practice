@@ -49,4 +49,9 @@ public class OrderController {
 	public ResponseEntity<OrderResponse> findById(@LoginMember Long memberId, @PathVariable Long id) {
 		return ResponseEntity.ok(orderService.findMyOrder(memberId, id));
 	}
+
+	@PostMapping("/{id}/cancel")
+	public ResponseEntity<OrderResponse> cancel(@LoginMember Long memberId, @PathVariable Long id) {
+		return ResponseEntity.ok(orderService.cancelOrder(memberId, id));
+	}
 }

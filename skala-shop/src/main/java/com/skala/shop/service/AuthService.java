@@ -65,8 +65,8 @@ public class AuthService {
 	public void logout(HttpSession session) {
 		if (session != null) {
 			Object memberId = session.getAttribute(SESSION_MEMBER_ID);
-			log.info("로그아웃: memberId={}", memberId);
 			session.invalidate();
+			log.info("로그아웃: memberId={}", memberId);
 		}
 	}
 }

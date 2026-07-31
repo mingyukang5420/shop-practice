@@ -19,6 +19,9 @@ Content-Type: application/json
   "quantity": 1
 }
 
+### 로그인 없이 내 정보 조회 시도 (401 UNAUTHORIZED)
+GET http://localhost:8080/api/members/me
+
 ###
 ### Auth(Member) API (v1.1 신규)
 ###
@@ -52,6 +55,9 @@ Content-Type: application/json
   "loginId": "dummy",
   "password": "wrong-password"
 }
+
+### 내 정보 조회 (v1.1 신규 - 현재 시점의 실제 포인트 확인)
+GET http://localhost:8080/api/members/me
 
 ###
 ### Book API

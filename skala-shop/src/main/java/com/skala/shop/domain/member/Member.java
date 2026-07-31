@@ -2,16 +2,15 @@ package com.skala.shop.domain.member;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * MVP에는 인증이 없어 id=1 고정 더미 회원만 존재한다({@code data.sql}로 시딩).
- * 회원가입 API가 없으므로 id는 자동 생성하지 않고 시딩 값을 그대로 사용한다.
- */
+/** password는 항상 BCrypt로 암호화된 값만 저장한다(평문 저장 금지). */
 @Entity
 @Table(name = "members")
 @Getter
@@ -19,13 +18,21 @@ import lombok.NoArgsConstructor;
 public class Member {
 
 	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
+
+	@Column(nullable = false, unique = true)
+	private String loginId;
+
+	@Column(nullable = false)
+	private String password;
 
 	@Column(nullable = false)
 	private String name;
 
-	public Member(Long id, String name) {
-		this.id = id;
+	public Member(String loginId, String password, String name) {
+		this.loginId = loginId;
+		this.password = password;
 		this.name = name;
 	}
 }

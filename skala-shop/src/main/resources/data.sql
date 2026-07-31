@@ -1,4 +1,6 @@
-INSERT INTO members (id, name) VALUES (1, '더미 회원');
+-- password는 'dummy1234'를 BCrypt로 암호화한 값(로그인 테스트용 계정)
+INSERT INTO members (id, login_id, password, name) VALUES (1, 'dummy', '$2a$10$jADQvSDOEm9pdG6YmMDJbeneZlTRn1s7y5P5o4cGDZXCkXUx4guR2', '더미 회원');
+ALTER TABLE members ALTER COLUMN id RESTART WITH 2;
 
 INSERT INTO categories (id, name) VALUES (1, '소설');
 INSERT INTO categories (id, name) VALUES (2, '에세이');

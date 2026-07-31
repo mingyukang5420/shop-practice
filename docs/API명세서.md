@@ -1,0 +1,185 @@
+# API명세서 (MVP)
+
+버전: v1 (MVP)
+상태: 확정
+기반 문서: 설계_v3(확정, Auth 섹션 제외), 요구사항명세서.md, 기능명세서.md
+
+## 1. 공통 규칙
+
+- Base URL: `/api`
+- **인증: 없음.** MVP의 모든 API는 인증/인가 없이 공개되며, 장바구니·주문 관련 API는 고정 더미 회원(id=1)을 기준으로 동작한다. (설계_v3의 `Authorization: Bearer {AccessToken}` 규칙은 MVP에 적용하지 않는다 — 인증 도입 시 재적용)
+- 응답: 성공 시 리소스를 직접 반환(불필요한 래핑 없음), 실패 시 아래 공통 에러 포맷 사용
+
+```json
+{
+  "timestamp": "2026-07-31T09:00:00",
+  "status": 404,
+  "code": "BOOK_NOT_FOUND",
+  "message": "도서를 찾을 수 없습니다.",
+  "path": "/api/books/999"
+}
+```
+
+- 목록 조회 페이징(Spring Data 방식): 요청 `?page=0&size=20&sort=createdAt,desc`, 응답 `{ content, page, size, totalElements, totalPages }`
+- 상태 코드: 200(조회/수정), 201(생성), 204(삭제), 400(검증 실패), 404(리소스 없음), 409(충돌, 재고부족 등)
+  - 401/403은 인증이 없는 MVP에서는 사용하지 않는다(추후 인증 도입 시 재적용)
+
+## 2. Book API
+
+| Method | URL | 설명 | 성공 코드 |
+| --- | --- | --- | --- |
+| GET | /api/books | 목록 조회 (페이징, keyword/categoryId 필터) | 200 |
+| GET | /api/books/{id} | 상세 조회 | 200 |
+| POST | /api/books | 도서 등록 | 201 |
+| PUT | /api/books/{id} | 도서 수정 | 200 |
+| DELETE | /api/books/{id} | 도서 삭제 | 204 |
+
+**GET /api/books?keyword=&categoryId=&page=&size=&sort=**
+
+- Response: `{ content: [{ id, title, author, price, stock, categoryName }], page, size, totalElements, totalPages }`
+
+**GET /api/books/{id}**
+
+- Response: `{ id, title, author, categoryId, categoryName, price, stock, description, createdAt }`
+- 에러: 404 `BOOK_NOT_FOUND`
+
+**POST /api/books**
+
+- Request: `{ "title": "string", "author": "string", "categoryId": 1, "price": 15000, "stock": 100, "description": "string" }`
+- Response: 등록된 도서 상세(GET 상세와 동일 스키마), 201
+- 에러: 400 `VALIDATION_ERROR`(필수값 누락/형식 오류), 404 `CATEGORY_NOT_FOUND`
+
+**PUT /api/books/{id}**
+
+- Request: POST와 동일 스키마(전체 필드 교체)
+- Response: 수정된 도서 상세, 200
+- 에러: 404 `BOOK_NOT_FOUND`, 404 `CATEGORY_NOT_FOUND`, 400 `VALIDATION_ERROR`
+
+**DELETE /api/books/{id}**
+
+- Response: 204 (본문 없음)
+- 에러: 404 `BOOK_NOT_FOUND`
+- 비고: 이미 주문된 도서도 삭제 가능. 관련 `OrderItem`은 스냅샷 필드로 이력을 유지한다(기능명세서 2.5 참조)
+
+## 3. Cart API
+
+전제: 모든 요청은 고정 더미 회원(id=1)을 기준으로 처리된다(인증 헤더 불필요).
+
+| Method | URL | 설명 | 성공 코드 |
+| --- | --- | --- | --- |
+| POST | /api/cart/items | 장바구니에 도서 담기 | 201 |
+| GET | /api/cart | 내 장바구니 조회 | 200 |
+| PATCH | /api/cart/items/{itemId} | 수량 수정 | 200 |
+| DELETE | /api/cart/items/{itemId} | 항목 삭제 | 204 |
+
+**POST /api/cart/items**
+
+- Request: `{ "bookId": 1, "quantity": 2 }`
+- Response: `{ itemId, bookId, title, price, quantity, stock }`, 201
+- 처리 규칙: 동일 `bookId`가 이미 장바구니에 있으면 **수량을 합산**하여 갱신(신규 행 생성 아님). 합산된 총수량이 현재 재고를 초과하면 실패(기능명세서 3.1 참조)
+- 에러: 404 `BOOK_NOT_FOUND`, 409 `INSUFFICIENT_STOCK`
+
+**GET /api/cart**
+
+- Response: `{ items: [{ itemId, bookId, title, price, quantity, stock }], totalPrice }`
+- 비고: `price`/`stock`은 항상 최신 도서 값(주문 전이므로 스냅샷 아님)
+
+**PATCH /api/cart/items/{itemId}**
+
+- Request: `{ "quantity": 3 }`
+- Response: `{ itemId, bookId, title, price, quantity, stock }`, 200
+- 에러: 404 `CART_ITEM_NOT_FOUND`, 409 `INSUFFICIENT_STOCK`
+
+**DELETE /api/cart/items/{itemId}**
+
+- Response: 204
+- 에러: 404 `CART_ITEM_NOT_FOUND`
+
+## 4. Order API
+
+| Method | URL | 설명 | 성공 코드 |
+| --- | --- | --- | --- |
+| POST | /api/orders | 장바구니 기반 주문 생성 (재고 차감) | 201 |
+| GET | /api/orders | 내 주문 목록 조회 | 200 |
+| GET | /api/orders/{id} | 내 주문 상세 조회 | 200 |
+
+**POST /api/orders**
+
+- Request: 없음(현재 장바구니 전체를 주문으로 전환) 또는 `{ "cartItemIds": [1,2] }`(일부 주문 시)
+- Response: `{ orderId, status: "주문완료", totalPrice, items: [{ bookId, title, price, quantity, subtotal }], orderedAt }`, 201
+- 에러: 400 `INVALID_REQUEST`(대상 항목 없음), 409 `INSUFFICIENT_STOCK`(재고 부족 항목이 있으면 전체 주문 실패, 트랜잭션 롤백 — 부분 성공 없음)
+- 부수 효과: 성공 시 각 대상 도서의 재고가 차감되고, 주문으로 전환된 장바구니 항목은 삭제된다
+
+**GET /api/orders?page=&size=&sort=**
+
+- Response: `{ content: [{ orderId, status, totalPrice, orderedAt }], page, size, totalElements, totalPages }`
+
+**GET /api/orders/{id}**
+
+- Response: POST 응답과 동일 상세 스키마
+- 에러: 404 `ORDER_NOT_FOUND`
+
+## 5. Admin API
+
+| Method | URL | 설명 | 성공 코드 |
+| --- | --- | --- | --- |
+| GET | /api/admin/orders | 전체 주문 목록 조회 (페이징, 회원 필터 없음) | 200 |
+| GET | /api/admin/orders/{id} | 주문 상세 조회 (회원 필터 없음) | 200 |
+
+- 응답 스키마는 Order API와 동일
+- 비고: MVP는 인증이 없어 `/api/orders`와 실질적 접근 차이가 없지만, **엔드포인트를 별도로 유지**한다. 추후 인증 도입 시 이 두 엔드포인트에만 ADMIN 권한 검사를 추가하면 되도록 하기 위함(기능명세서 4.3 참조)
+- 에러: 404 `ORDER_NOT_FOUND`
+
+## 6. 에러 코드 전체 목록
+
+| code | status | 상황 |
+| --- | --- | --- |
+| BOOK_NOT_FOUND | 404 | 존재하지 않는 도서 id 조회/수정/삭제 |
+| CATEGORY_NOT_FOUND | 404 | 존재하지 않는 categoryId로 도서 등록/수정 |
+| CART_ITEM_NOT_FOUND | 404 | 존재하지 않는 장바구니 항목 수정/삭제 |
+| ORDER_NOT_FOUND | 404 | 존재하지 않는 주문 조회 |
+| INSUFFICIENT_STOCK | 409 | 요청 수량이 현재 재고를 초과(장바구니 담기/수정/주문 생성) |
+| INVALID_REQUEST | 400 | 주문 생성 시 대상 항목이 없는 등 비즈니스 규칙 위반 |
+| VALIDATION_ERROR | 400 | 필수값 누락, 형식/범위 오류(Bean Validation 실패) |
+
+## 7. 재고 초과 주문 방지 설계 (REQ-017 상세)
+
+본 절은 기능명세서 5절의 내용을 API 계약과 향후 구현 설계 관점에서 구체화한다. **MVP 코드에는 7.1(기본 검증)만 반영되며, 7.2(동시성 강화)는 이번 라운드에는 설계만 진행하고 구현하지 않는다.**
+
+### 7.1 기본 검증 (MVP 구현 범위)
+
+3개 API(`POST /api/cart/items`, `PATCH /api/cart/items/{itemId}`, `POST /api/orders`) 모두 재고 초과 시 아래 형식으로 409를 반환한다:
+
+```json
+{
+  "timestamp": "2026-07-31T09:00:00",
+  "status": 409,
+  "code": "INSUFFICIENT_STOCK",
+  "message": "요청하신 수량이 재고를 초과합니다. (도서: 클린 코드, 요청 수량: 5, 가용 재고: 2)",
+  "path": "/api/cart/items"
+}
+```
+
+메시지에는 도서명, 요청 수량, 가용 재고를 포함하여 클라이언트가 구체적인 피드백을 사용자에게 보여줄 수 있도록 한다.
+
+### 7.2 동시성 강화 설계 (차기 라운드 구현 예정)
+
+**문제**: 기본 검증(단순 조회 후 비교)은 여러 요청이 동시에 같은 도서를 주문할 때 lost update로 인한 초과 판매를 막지 못한다(기능명세서 5.3 참조).
+
+**설계 방안**:
+
+1. **비관적 쓰기 락**: `OrderService.createOrder()` 트랜잭션 내에서, 재고 확인·차감 직전에 대상 `Book` row에 대해 `SELECT ... FOR UPDATE`(JPA: `BookRepository`에 `@Lock(LockModeType.PESSIMISTIC_WRITE)`를 적용한 조회 메서드, 예: `findByIdForUpdate(Long id)`)를 실행한다. 동일 도서에 대한 동시 트랜잭션은 락이 해제될 때까지 대기하므로, 검증과 차감이 사실상 순차적으로 이루어져 lost update가 방지된다.
+2. **낙관적 락과의 트레이드오프**: `@Version` 기반 낙관적 락은 충돌 시 재시도가 필요하고 인기 도서일수록 재시도 빈도가 높아 사용자 경험이 나빠질 수 있다. 재고 차감처럼 충돌 가능성이 높은 케이스에는 비관적 락을 우선한다.
+3. **데드락 회피**: 한 주문에 여러 도서가 포함된 경우, 잠글 `bookId` 목록을 **오름차순 정렬 후 그 순서대로 락을 순차 획득**한다(`cartItems.stream().map(CartItem::getBookId).distinct().sorted()...`). 모든 트랜잭션이 동일한 전역 순서로 락을 요청하도록 강제하여 순환 대기(교착 상태) 조건을 원천적으로 제거한다.
+4. **최종 실패 시 에러 계약**: 락 획득 후에도 실제로는 재고가 부족한 것으로 판명되면 7.1과 동일한 `INSUFFICIENT_STOCK` 포맷으로 응답하고 트랜잭션을 롤백한다.
+
+**시퀀스 (텍스트 서술)**
+
+- *정상 흐름*: 요청 → 트랜잭션 시작 → 대상 Book row 락 획득(대기 없음) → 재고 확인 통과 → 차감 → Order/OrderItem 저장 → 커밋(락 해제) → 201 응답
+- *경쟁 흐름*: 요청 A, B가 동시에 같은 책 주문 → A가 먼저 락 획득 및 커밋 완료 → B는 A의 커밋까지 대기 → 락 해제 후 B가 락 획득, 이미 감소한 최신 재고를 다시 읽음 → 재고 부족으로 판명되면 409 반환 및 롤백(반대로 재고가 충분하면 정상 처리)
+
+**환경 제약 및 향후 검증 계획**
+
+- H2 인메모리 DB도 `PESSIMISTIC_WRITE`/`FOR UPDATE`를 지원하지만, 운영 DB(PostgreSQL/MySQL 등) 대비 락 타임아웃·교착 상태 탐지 동작이 단순화되어 있을 수 있어 운영 전환 시 재검증이 필요하다.
+- 단일 프로세스/단일 커넥션 기준 테스트로는 동시성 버그가 은폐되기 쉬우므로, 실제 구현 시 `ExecutorService` 등으로 동시 주문 요청을 시뮬레이션하는 멀티스레드 통합 테스트를 별도로 작성해야 한다.
+- 현재 MVP는 회원이 1명뿐이라 서로 다른 회원 간 동시 경쟁이 실질적으로 발생하지 않는다. 이 설계는 실제 인증·다중 회원 지원이 도입된 이후 구현 우선순위를 재검토한다.

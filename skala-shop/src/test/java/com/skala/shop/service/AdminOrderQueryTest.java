@@ -1,0 +1,44 @@
+package com.skala.shop.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import com.skala.shop.dto.cart.CartItemAddRequest;
+import com.skala.shop.dto.order.OrderResponse;
+import com.skala.shop.exception.BusinessException;
+import com.skala.shop.exception.ErrorCode;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.transaction.annotation.Transactional;
+
+@SpringBootTest
+@Transactional
+class AdminOrderQueryTest {
+
+	@Autowired
+	private OrderService orderService;
+
+	@Autowired
+	private CartService cartService;
+
+	@Test
+	void 관리자_조회는_회원_필터_없이_전체_주문을_반환한다() {
+		cartService.add(new CartItemAddRequest(1L, 1));
+		OrderResponse created = orderService.createOrder(null);
+
+		assertThat(orderService.findAllOrders(PageRequest.of(0, 10)).content())
+				.extracting(summary -> summary.orderId())
+				.contains(created.orderId());
+		assertThat(orderService.findOrder(created.orderId()).orderId()).isEqualTo(created.orderId());
+	}
+
+	@Test
+	void 존재하지_않는_주문_조회시_ORDER_NOT_FOUND를_던진다() {
+		assertThatThrownBy(() -> orderService.findOrder(9999L))
+				.isInstanceOf(BusinessException.class)
+				.satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(ErrorCode.ORDER_NOT_FOUND));
+	}
+}

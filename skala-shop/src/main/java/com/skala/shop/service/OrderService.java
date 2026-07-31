@@ -89,6 +89,17 @@ public class OrderService {
 		return toResponse(order);
 	}
 
+	/** 관리자 조회는 회원 필터 없이 전체 주문을 대상으로 한다(API명세서 5절, 기능명세서 4.3). */
+	public PageResponse<OrderSummaryResponse> findAllOrders(Pageable pageable) {
+		return PageResponse.from(orderRepository.findAll(pageable).map(OrderSummaryResponse::from));
+	}
+
+	public OrderResponse findOrder(Long orderId) {
+		Order order = orderRepository.findById(orderId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+		return toResponse(order);
+	}
+
 	/** cartItemIds 미지정 시 장바구니 전체, 지정 시 본인 소유 항목인지 확인한다(기능명세서 4.1). */
 	private List<CartItem> resolveTargets(Member member, OrderCreateRequest request) {
 		if (request == null || request.cartItemIds() == null) {

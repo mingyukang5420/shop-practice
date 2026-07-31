@@ -21,7 +21,7 @@ class OrderItemBookDeletionTest {
 
 	@Test
 	void orderItem은_주문시점_스냅샷을_유지하고_book이_삭제되면_참조만_NULL이_된다() {
-		Member member = new Member("test-login", "encoded-placeholder", "더미 회원");
+		Member member = new Member("test-login", "encoded-placeholder", "더미 회원", 1_000_000);
 		Category category = new Category(1L, "소설");
 		Book book = Book.builder()
 				.title("클린 코드")

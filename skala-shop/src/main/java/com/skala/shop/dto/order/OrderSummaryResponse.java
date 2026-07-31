@@ -4,10 +4,12 @@ import java.time.LocalDateTime;
 
 import com.skala.shop.domain.order.Order;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 public record OrderSummaryResponse(
-	Long orderId,
-	String status,
-	Integer totalPrice,
+	@Schema(example = "1") Long orderId,
+	@Schema(description = "주문완료 또는 주문취소", example = "주문완료") String status,
+	@Schema(example = "60000") Integer totalPrice,
 	LocalDateTime orderedAt
 ) {
 

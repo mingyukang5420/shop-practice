@@ -50,8 +50,9 @@ public class BookService {
 				.stock(request.stock())
 				.description(request.description())
 				.build();
+		BookResponse response = BookResponse.from(bookRepository.save(book));
 		log.info("도서 등록: title={}, price={}, stock={}", request.title(), request.price(), request.stock());
-		return BookResponse.from(bookRepository.save(book));
+		return response;
 	}
 
 	@Transactional
@@ -67,8 +68,8 @@ public class BookService {
 	@Transactional
 	public void delete(Long id) {
 		Book book = getBook(id);
-		log.info("도서 삭제: id={}, title={}", id, book.getTitle());
 		bookRepository.delete(book);
+		log.info("도서 삭제: id={}, title={}", id, book.getTitle());
 	}
 
 	private Book getBook(Long id) {

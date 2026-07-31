@@ -26,9 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class OrderService {
 
-	/** MVP는 인증이 없어 모든 주문 요청이 고정 더미 회원(id=1)을 기준으로 동작한다(요구사항명세서 2절). */
-	private static final Long DUMMY_MEMBER_ID = 1L;
-
 	private final OrderRepository orderRepository;
 	private final CartItemRepository cartItemRepository;
 	private final MemberRepository memberRepository;
@@ -49,8 +46,8 @@ public class OrderService {
 	 * 트랜잭션 전체가 롤백된다(TOCTOU 대응 재검증).
 	 */
 	@Transactional
-	public OrderResponse createOrder(OrderCreateRequest request) {
-		Member member = getMember();
+	public OrderResponse createOrder(Long memberId, OrderCreateRequest request) {
+		Member member = getMember(memberId);
 		List<CartItem> targets = resolveTargets(member, request);
 
 		if (targets.isEmpty()) {
@@ -76,13 +73,13 @@ public class OrderService {
 		return toResponse(order);
 	}
 
-	public PageResponse<OrderSummaryResponse> findMyOrders(Pageable pageable) {
-		Member member = getMember();
+	public PageResponse<OrderSummaryResponse> findMyOrders(Long memberId, Pageable pageable) {
+		Member member = getMember(memberId);
 		return PageResponse.from(orderRepository.findAllByMember(member, pageable).map(OrderSummaryResponse::from));
 	}
 
-	public OrderResponse findMyOrder(Long orderId) {
-		Member member = getMember();
+	public OrderResponse findMyOrder(Long memberId, Long orderId) {
+		Member member = getMember(memberId);
 		Order order = orderRepository.findById(orderId)
 				.filter(found -> found.getMember().getId().equals(member.getId()))
 				.orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
@@ -120,8 +117,8 @@ public class OrderService {
 		return new OrderResponse(order.getId(), order.getStatus().getDisplayName(), order.getTotalPrice(), items, order.getOrderedAt());
 	}
 
-	private Member getMember() {
-		return memberRepository.findById(DUMMY_MEMBER_ID)
-				.orElseThrow(() -> new IllegalStateException("더미 회원(id=1)이 시딩되어 있지 않습니다."));
+	private Member getMember(Long memberId) {
+		return memberRepository.findById(memberId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
 	}
 }

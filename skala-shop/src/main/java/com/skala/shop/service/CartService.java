@@ -22,9 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class CartService {
 
-	/** MVP는 인증이 없어 모든 장바구니 요청이 고정 더미 회원(id=1)을 기준으로 동작한다(요구사항명세서 2절). */
-	private static final Long DUMMY_MEMBER_ID = 1L;
-
 	private final CartItemRepository cartItemRepository;
 	private final BookRepository bookRepository;
 	private final MemberRepository memberRepository;
@@ -41,8 +38,8 @@ public class CartService {
 
 	/** 동일 도서 재담기 시 신규 행 대신 수량을 합산하고, 합산된 총수량 기준으로 재고를 검증한다(기능명세서 3.1). */
 	@Transactional
-	public CartItemResponse add(CartItemAddRequest request) {
-		Member member = getMember();
+	public CartItemResponse add(Long memberId, CartItemAddRequest request) {
+		Member member = getMember(memberId);
 		Book book = getBook(request.bookId());
 		CartItem cartItem = cartItemRepository.findByMemberAndBook(member, book).orElse(null);
 
@@ -60,8 +57,8 @@ public class CartService {
 	}
 
 	/** price/stock은 스냅샷이 아니라 항상 최신 Book 값을 조회해 반환한다(기능명세서 3.2). */
-	public CartResponse findMyCart() {
-		Member member = getMember();
+	public CartResponse findMyCart(Long memberId) {
+		Member member = getMember(memberId);
 		List<CartItemResponse> items = cartItemRepository.findAllByMember(member).stream()
 				.map(item -> toResponse(item, item.getBook()))
 				.toList();
@@ -70,16 +67,16 @@ public class CartService {
 	}
 
 	@Transactional
-	public CartItemResponse changeQuantity(Long itemId, CartItemQuantityRequest request) {
-		CartItem cartItem = getCartItem(itemId);
+	public CartItemResponse changeQuantity(Long memberId, Long itemId, CartItemQuantityRequest request) {
+		CartItem cartItem = getOwnedCartItem(memberId, itemId);
 		validateStock(cartItem.getBook(), request.quantity());
 		cartItem.changeQuantity(request.quantity());
 		return toResponse(cartItem, cartItem.getBook());
 	}
 
 	@Transactional
-	public void remove(Long itemId) {
-		cartItemRepository.delete(getCartItem(itemId));
+	public void remove(Long memberId, Long itemId) {
+		cartItemRepository.delete(getOwnedCartItem(memberId, itemId));
 	}
 
 	private void validateStock(Book book, int requestedQuantity) {
@@ -93,9 +90,9 @@ public class CartService {
 				cartItem.getId(), book.getId(), book.getTitle(), book.getPrice(), cartItem.getQuantity(), book.getStock());
 	}
 
-	private Member getMember() {
-		return memberRepository.findById(DUMMY_MEMBER_ID)
-				.orElseThrow(() -> new IllegalStateException("더미 회원(id=1)이 시딩되어 있지 않습니다."));
+	private Member getMember(Long memberId) {
+		return memberRepository.findById(memberId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
 	}
 
 	private Book getBook(Long bookId) {
@@ -103,8 +100,10 @@ public class CartService {
 				.orElseThrow(() -> new BusinessException(ErrorCode.BOOK_NOT_FOUND));
 	}
 
-	private CartItem getCartItem(Long itemId) {
+	/** 다른 회원 소유의 항목은 존재하지 않는 것과 동일하게 취급한다(항목 존재 여부로 소유 여부를 추측하지 못하도록). */
+	private CartItem getOwnedCartItem(Long memberId, Long itemId) {
 		return cartItemRepository.findById(itemId)
+				.filter(item -> item.getMember().getId().equals(memberId))
 				.orElseThrow(() -> new BusinessException(ErrorCode.CART_ITEM_NOT_FOUND));
 	}
 }

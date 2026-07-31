@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class AdminOrderQueryTest {
 
+	private static final Long MEMBER_ID = 1L;
+
 	@Autowired
 	private OrderService orderService;
 
@@ -26,8 +28,8 @@ class AdminOrderQueryTest {
 
 	@Test
 	void 관리자_조회는_회원_필터_없이_전체_주문을_반환한다() {
-		cartService.add(new CartItemAddRequest(1L, 1));
-		OrderResponse created = orderService.createOrder(null);
+		cartService.add(MEMBER_ID, new CartItemAddRequest(1L, 1));
+		OrderResponse created = orderService.createOrder(MEMBER_ID, null);
 
 		assertThat(orderService.findAllOrders(PageRequest.of(0, 10)).content())
 				.extracting(summary -> summary.orderId())

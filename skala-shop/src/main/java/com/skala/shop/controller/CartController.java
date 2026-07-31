@@ -1,5 +1,6 @@
 package com.skala.shop.controller;
 
+import com.skala.shop.common.LoginMember;
 import com.skala.shop.dto.cart.CartItemAddRequest;
 import com.skala.shop.dto.cart.CartItemQuantityRequest;
 import com.skala.shop.dto.cart.CartItemResponse;
@@ -30,26 +31,27 @@ public class CartController {
 	}
 
 	@PostMapping("/items")
-	public ResponseEntity<CartItemResponse> add(@Valid @RequestBody CartItemAddRequest request) {
-		return ResponseEntity.status(HttpStatus.CREATED).body(cartService.add(request));
+	public ResponseEntity<CartItemResponse> add(@LoginMember Long memberId, @Valid @RequestBody CartItemAddRequest request) {
+		return ResponseEntity.status(HttpStatus.CREATED).body(cartService.add(memberId, request));
 	}
 
 	@GetMapping
-	public ResponseEntity<CartResponse> findMyCart() {
-		return ResponseEntity.ok(cartService.findMyCart());
+	public ResponseEntity<CartResponse> findMyCart(@LoginMember Long memberId) {
+		return ResponseEntity.ok(cartService.findMyCart(memberId));
 	}
 
 	@PatchMapping("/items/{itemId}")
 	public ResponseEntity<CartItemResponse> changeQuantity(
+			@LoginMember Long memberId,
 			@PathVariable Long itemId,
 			@Valid @RequestBody CartItemQuantityRequest request
 	) {
-		return ResponseEntity.ok(cartService.changeQuantity(itemId, request));
+		return ResponseEntity.ok(cartService.changeQuantity(memberId, itemId, request));
 	}
 
 	@DeleteMapping("/items/{itemId}")
-	public ResponseEntity<Void> remove(@PathVariable Long itemId) {
-		cartService.remove(itemId);
+	public ResponseEntity<Void> remove(@LoginMember Long memberId, @PathVariable Long itemId) {
+		cartService.remove(memberId, itemId);
 		return ResponseEntity.noContent().build();
 	}
 }

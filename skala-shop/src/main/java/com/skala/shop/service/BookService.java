@@ -11,6 +11,8 @@ import com.skala.shop.dto.book.BookSummaryResponse;
 import com.skala.shop.exception.BusinessException;
 import com.skala.shop.exception.ErrorCode;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 public class BookService {
+
+	private static final Logger log = LoggerFactory.getLogger(BookService.class);
 
 	private final BookRepository bookRepository;
 	private final CategoryRepository categoryRepository;
@@ -46,6 +50,7 @@ public class BookService {
 				.stock(request.stock())
 				.description(request.description())
 				.build();
+		log.info("도서 등록: title={}, price={}, stock={}", request.title(), request.price(), request.stock());
 		return BookResponse.from(bookRepository.save(book));
 	}
 
@@ -54,13 +59,16 @@ public class BookService {
 		Book book = getBook(id);
 		Category category = getCategory(request.categoryId());
 		book.update(request.title(), request.author(), category, request.price(), request.stock(), request.description());
+		log.info("도서 수정: id={}, title={}", id, request.title());
 		return BookResponse.from(book);
 	}
 
 	/** 이미 주문된 도서도 삭제 가능하며, OrderItem의 스냅샷은 Book FK의 ON DELETE SET NULL로 보존된다(기능명세서 2.5). */
 	@Transactional
 	public void delete(Long id) {
-		bookRepository.delete(getBook(id));
+		Book book = getBook(id);
+		log.info("도서 삭제: id={}, title={}", id, book.getTitle());
+		bookRepository.delete(book);
 	}
 
 	private Book getBook(Long id) {

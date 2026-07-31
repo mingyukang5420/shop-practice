@@ -15,6 +15,7 @@
 | POST | /api/members | 회원가입 | 201 |
 | POST | /api/members/login | 로그인(세션 쿠키 발급) | 200 |
 | POST | /api/members/logout | 로그아웃(세션 무효화) | 204 |
+| GET | /api/members/me | 내 정보 조회(현재 보유 포인트 확인, 세션 인증 필요) | 200 |
 
 **POST /api/members**
 
@@ -26,7 +27,7 @@
 
 - Request: `{ "loginId": "string", "password": "string" }`
 - Response: `{ memberId, loginId, name }`, 200 + `Set-Cookie: JSESSIONID=...`
-- 비고: 응답에는 `point`를 포함하지 않는다(회원가입 시 1회 확인하는 값으로 충분하며, 로그인마다 매번 조회할 필요는 없다고 판단). 현재 보유 포인트를 확인할 별도의 "내 정보 조회" API는 이번 라운드 범위 밖이다
+- 비고: 응답에는 `point`를 포함하지 않는다(로그인 직후보다는 주문/취소로 값이 바뀐 뒤 확인하는 용도가 크므로, 최신 값은 아래 `GET /api/members/me`로 별도 조회)
 - 에러: 401 `INVALID_CREDENTIALS`(아이디 또는 비밀번호 불일치)
 
 **POST /api/members/logout**
@@ -34,10 +35,16 @@
 - Response: 204(본문 없음), 세션 무효화
 - 비고: 세션이 없어도 오류 없이 204를 반환한다
 
+**GET /api/members/me** (v1.1 신규)
+
+- Request: 없음(세션 쿠키로 회원 식별)
+- Response: `{ memberId, loginId, name, point }`, 200 — 주문 생성/취소로 변동된 **현재 시점의 실제 포인트**를 반환한다(스냅샷 아님)
+- 에러: 401 `UNAUTHORIZED`(미인증)
+
 ## 1. 공통 규칙
 
 - Base URL: `/api`
-- **인증(v1.1)**: Book API와 Admin API는 인증 없이 공개된다. **Cart API와 Order API는 세션 인증이 필요**하며, 로그인 후 발급된 세션 쿠키(`JSESSIONID`)가 없으면 401 `UNAUTHORIZED`를 반환한다. (최초 MVP 전제였던 "인증 없음, 고정 더미 회원(id=1) 기준"은 v1.1부터 로그인 회원 기준으로 대체됨)
+- **인증(v1.1)**: Book API와 Admin API는 인증 없이 공개된다. **Cart API, Order API, `GET /api/members/me`는 세션 인증이 필요**하며, 로그인 후 발급된 세션 쿠키(`JSESSIONID`)가 없으면 401 `UNAUTHORIZED`를 반환한다. (최초 MVP 전제였던 "인증 없음, 고정 더미 회원(id=1) 기준"은 v1.1부터 로그인 회원 기준으로 대체됨)
 - 응답: 성공 시 리소스를 직접 반환(불필요한 래핑 없음), 실패 시 아래 공통 에러 포맷 사용
 
 ```json

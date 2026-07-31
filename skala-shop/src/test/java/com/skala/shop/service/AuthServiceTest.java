@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.skala.shop.domain.member.MemberRepository;
 import com.skala.shop.dto.member.LoginRequest;
 import com.skala.shop.dto.member.LoginResponse;
+import com.skala.shop.dto.member.MemberResponse;
 import com.skala.shop.dto.member.SignUpRequest;
 import com.skala.shop.dto.member.SignUpResponse;
 import com.skala.shop.exception.BusinessException;
@@ -77,5 +78,23 @@ class AuthServiceTest {
 		assertThatThrownBy(() -> authService.login(new LoginRequest("wrongpw01", "wrong-password"), new MockHttpSession()))
 				.isInstanceOf(BusinessException.class)
 				.satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(ErrorCode.INVALID_CREDENTIALS));
+	}
+
+	@Test
+	void 내_정보_조회는_현재_시점의_실제_포인트를_반환한다() {
+		SignUpResponse signedUp = authService.signUp(new SignUpRequest("meinfo01", "plain1234", "정보조회회원"));
+
+		MemberResponse response = authService.getMyInfo(signedUp.memberId());
+
+		assertThat(response.memberId()).isEqualTo(signedUp.memberId());
+		assertThat(response.loginId()).isEqualTo("meinfo01");
+		assertThat(response.point()).isEqualTo(1_000_000);
+	}
+
+	@Test
+	void 존재하지_않는_회원id로_내_정보_조회시_UNAUTHORIZED를_던진다() {
+		assertThatThrownBy(() -> authService.getMyInfo(9999L))
+				.isInstanceOf(BusinessException.class)
+				.satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(ErrorCode.UNAUTHORIZED));
 	}
 }

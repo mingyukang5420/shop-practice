@@ -37,6 +37,14 @@ class AuthServiceTest {
 	}
 
 	@Test
+	void 회원가입_시_초기_포인트_1_000_000이_지급된다() {
+		SignUpResponse response = authService.signUp(new SignUpRequest("pointuser01", "plain1234", "포인트회원"));
+
+		assertThat(response.point()).isEqualTo(1_000_000);
+		assertThat(memberRepository.findById(response.memberId()).orElseThrow().getPoint()).isEqualTo(1_000_000);
+	}
+
+	@Test
 	void 중복된_아이디로_가입하면_DUPLICATE_LOGIN_ID를_던진다() {
 		authService.signUp(new SignUpRequest("dup01", "plain1234", "회원1"));
 

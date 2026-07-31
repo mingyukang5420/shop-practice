@@ -24,4 +24,11 @@ public class BusinessException extends RuntimeException {
 				.formatted(bookTitle, requestedQuantity, availableStock);
 		return new BusinessException(ErrorCode.INSUFFICIENT_STOCK, message);
 	}
+
+	/** 필요 금액/보유 포인트를 메시지에 포함한 INSUFFICIENT_POINT 예외를 만든다. */
+	public static BusinessException insufficientPoint(int requiredPoint, int availablePoint) {
+		String message = "보유 포인트가 부족합니다. (필요 금액: %d, 보유 포인트: %d)"
+				.formatted(requiredPoint, availablePoint);
+		return new BusinessException(ErrorCode.INSUFFICIENT_POINT, message);
+	}
 }

@@ -122,4 +122,52 @@ class OrderServiceTest {
 				.contains(created.orderId());
 		assertThat(orderService.findMyOrder(MEMBER_ID, created.orderId()).orderId()).isEqualTo(created.orderId());
 	}
+
+	@Test
+	void 재고는_충분해도_보유_포인트가_부족하면_INSUFFICIENT_POINT를_던지고_아무것도_반영하지_않는다() {
+		// 클린 코드(id=1, 30000원 x 재고20 = 600,000원) + 이펙티브 자바(id=2, 36000원 x 재고15 = 540,000원)
+		// 합계 1,140,000원은 초기 포인트(1,000,000원)를 초과하지만, 재고는 각각 한도 내라 재고 검증은 통과한다.
+		cartService.add(MEMBER_ID, new CartItemAddRequest(1L, 20));
+		cartService.add(MEMBER_ID, new CartItemAddRequest(2L, 15));
+
+		assertThatThrownBy(() -> orderService.createOrder(MEMBER_ID, null))
+				.isInstanceOf(BusinessException.class)
+				.satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(ErrorCode.INSUFFICIENT_POINT));
+
+		assertThat(bookRepository.findById(1L).orElseThrow().getStock()).isEqualTo(20);
+		assertThat(bookRepository.findById(2L).orElseThrow().getStock()).isEqualTo(15);
+		assertThat(memberRepository.findById(MEMBER_ID).orElseThrow().getPoint()).isEqualTo(1_000_000);
+	}
+
+	@Test
+	void 주문을_취소하면_재고가_복구되고_포인트가_환급되며_상태가_주문취소로_바뀐다() {
+		cartService.add(MEMBER_ID, new CartItemAddRequest(1L, 2)); // 클린 코드 2권, 60000원
+		OrderResponse created = orderService.createOrder(MEMBER_ID, null);
+		assertThat(bookRepository.findById(1L).orElseThrow().getStock()).isEqualTo(18);
+		assertThat(memberRepository.findById(MEMBER_ID).orElseThrow().getPoint()).isEqualTo(940_000);
+
+		OrderResponse canceled = orderService.cancelOrder(MEMBER_ID, created.orderId());
+
+		assertThat(canceled.status()).isEqualTo("주문취소");
+		assertThat(bookRepository.findById(1L).orElseThrow().getStock()).isEqualTo(20);
+		assertThat(memberRepository.findById(MEMBER_ID).orElseThrow().getPoint()).isEqualTo(1_000_000);
+	}
+
+	@Test
+	void 이미_취소된_주문을_다시_취소하면_ORDER_ALREADY_CANCELED를_던진다() {
+		cartService.add(MEMBER_ID, new CartItemAddRequest(1L, 1));
+		OrderResponse created = orderService.createOrder(MEMBER_ID, null);
+		orderService.cancelOrder(MEMBER_ID, created.orderId());
+
+		assertThatThrownBy(() -> orderService.cancelOrder(MEMBER_ID, created.orderId()))
+				.isInstanceOf(BusinessException.class)
+				.satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(ErrorCode.ORDER_ALREADY_CANCELED));
+	}
+
+	@Test
+	void 존재하지_않거나_본인_소유가_아닌_주문_취소시_ORDER_NOT_FOUND를_던진다() {
+		assertThatThrownBy(() -> orderService.cancelOrder(MEMBER_ID, 9999L))
+				.isInstanceOf(BusinessException.class)
+				.satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(ErrorCode.ORDER_NOT_FOUND));
+	}
 }

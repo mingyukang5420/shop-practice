@@ -42,8 +42,8 @@ public class OrderService {
 
 	/**
 	 * 재고 초과 주문 방지 3단계(담기→수정→주문생성) 중 마지막 검증 지점이다(기능명세서 5.1~5.3).
-	 * 대상 항목을 먼저 전량 검증한 뒤에만 재고를 차감하므로, 하나라도 부족하면 어떤 것도 반영되지 않고
-	 * 트랜잭션 전체가 롤백된다(TOCTOU 대응 재검증).
+	 * 재고와 포인트를 모두 먼저 검증한 뒤에만 반영하므로, 하나라도 부족하면 어떤 것도 반영되지 않고
+	 * 트랜잭션 전체가 롤백된다(TOCTOU 대응 재검증 + 포인트 검증, 기능명세서 4.1).
 	 */
 	@Transactional
 	public OrderResponse createOrder(Long memberId, OrderCreateRequest request) {
@@ -54,11 +54,16 @@ public class OrderService {
 			throw new BusinessException(ErrorCode.INVALID_REQUEST, "주문할 장바구니 항목이 없습니다.");
 		}
 
+		int totalOrderPrice = 0;
 		for (CartItem item : targets) {
 			Book book = item.getBook();
 			if (item.getQuantity() > book.getStock()) {
 				throw BusinessException.insufficientStock(book.getTitle(), item.getQuantity(), book.getStock());
 			}
+			totalOrderPrice += book.getPrice() * item.getQuantity();
+		}
+		if (member.getPoint() < totalOrderPrice) {
+			throw BusinessException.insufficientPoint(totalOrderPrice, member.getPoint());
 		}
 
 		Order order = new Order(member);
@@ -67,6 +72,7 @@ public class OrderService {
 			book.decreaseStock(item.getQuantity());
 			order.addOrderItem(OrderItem.snapshotOf(book, item.getQuantity()));
 		}
+		member.usePoint(totalOrderPrice);
 		orderRepository.save(order);
 		cartItemRepository.deleteAll(targets);
 
@@ -80,9 +86,30 @@ public class OrderService {
 
 	public OrderResponse findMyOrder(Long memberId, Long orderId) {
 		Member member = getMember(memberId);
-		Order order = orderRepository.findById(orderId)
-				.filter(found -> found.getMember().getId().equals(member.getId()))
-				.orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
+		return toResponse(getOwnedOrder(member, orderId));
+	}
+
+	/**
+	 * 주문 전체를 취소한다(항목 단위 부분 취소는 지원하지 않음, 기능명세서 4.4).
+	 * 삭제된 도서(FK가 NULL인 OrderItem)는 재고 복구 대상에서 제외한다.
+	 */
+	@Transactional
+	public OrderResponse cancelOrder(Long memberId, Long orderId) {
+		Member member = getMember(memberId);
+		Order order = getOwnedOrder(member, orderId);
+		if (order.isCanceled()) {
+			throw new BusinessException(ErrorCode.ORDER_ALREADY_CANCELED);
+		}
+
+		for (OrderItem orderItem : order.getOrderItems()) {
+			Book book = orderItem.getBook();
+			if (book != null) {
+				book.increaseStock(orderItem.getQuantity());
+			}
+		}
+		member.refundPoint(order.getTotalPrice());
+		order.cancel();
+
 		return toResponse(order);
 	}
 
@@ -120,5 +147,12 @@ public class OrderService {
 	private Member getMember(Long memberId) {
 		return memberRepository.findById(memberId)
 				.orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
+	}
+
+	/** 다른 회원 소유의 주문은 존재하지 않는 것과 동일하게 취급한다. */
+	private Order getOwnedOrder(Member member, Long orderId) {
+		return orderRepository.findById(orderId)
+				.filter(found -> found.getMember().getId().equals(member.getId()))
+				.orElseThrow(() -> new BusinessException(ErrorCode.ORDER_NOT_FOUND));
 	}
 }

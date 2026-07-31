@@ -30,9 +30,23 @@ public class Member {
 	@Column(nullable = false)
 	private String name;
 
-	public Member(String loginId, String password, String name) {
+	@Column(nullable = false)
+	private Integer point;
+
+	public Member(String loginId, String password, String name, Integer point) {
 		this.loginId = loginId;
 		this.password = password;
 		this.name = name;
+		this.point = point;
+	}
+
+	/** 주문 생성 시 총액만큼 포인트를 차감한다. 잔액 검증은 Service 계층 책임이다. */
+	public void usePoint(int amount) {
+		this.point -= amount;
+	}
+
+	/** 주문 취소 시 총액만큼 포인트를 환급한다. */
+	public void refundPoint(int amount) {
+		this.point += amount;
 	}
 }

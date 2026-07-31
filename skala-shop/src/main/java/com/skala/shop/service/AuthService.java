@@ -22,6 +22,9 @@ public class AuthService {
 	/** 로그인한 회원 id를 세션에 저장할 때 쓰는 attribute 키. JWT 대신 세션(쿠키) 기반으로 로그인 상태를 유지한다. */
 	public static final String SESSION_MEMBER_ID = "MEMBER_ID";
 
+	/** 회원가입 시 지급되는 초기 포인트(0731-practice.pdf 실습 시나리오와 동일한 값). */
+	private static final int INITIAL_POINT = 1_000_000;
+
 	private final MemberRepository memberRepository;
 	private final PasswordEncoder passwordEncoder;
 
@@ -35,9 +38,10 @@ public class AuthService {
 		if (memberRepository.existsByLoginId(request.loginId())) {
 			throw new BusinessException(ErrorCode.DUPLICATE_LOGIN_ID);
 		}
-		Member member = new Member(request.loginId(), passwordEncoder.encode(request.password()), request.name());
+		Member member = new Member(
+				request.loginId(), passwordEncoder.encode(request.password()), request.name(), INITIAL_POINT);
 		memberRepository.save(member);
-		return new SignUpResponse(member.getId(), member.getLoginId(), member.getName());
+		return new SignUpResponse(member.getId(), member.getLoginId(), member.getName(), member.getPoint());
 	}
 
 	/** 인증 성공 시 세션에 회원 id를 저장한다. 이후 요청은 브라우저가 자동으로 보내는 세션 쿠키로 식별된다. */

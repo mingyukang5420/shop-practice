@@ -1,5 +1,6 @@
 -- password는 'dummy1234'를 BCrypt로 암호화한 값(로그인 테스트용 계정)
-INSERT INTO members (id, login_id, password, name) VALUES (1, 'dummy', '$2a$10$jADQvSDOEm9pdG6YmMDJbeneZlTRn1s7y5P5o4cGDZXCkXUx4guR2', '더미 회원');
+-- point는 회원가입 시 지급되는 초기 포인트(1,000,000)와 동일한 값으로 시딩한다.
+INSERT INTO members (id, login_id, password, name, point) VALUES (1, 'dummy', '$2a$10$jADQvSDOEm9pdG6YmMDJbeneZlTRn1s7y5P5o4cGDZXCkXUx4guR2', '더미 회원', 1000000);
 ALTER TABLE members ALTER COLUMN id RESTART WITH 2;
 
 INSERT INTO categories (id, name) VALUES (1, '소설');

@@ -68,4 +68,13 @@ public class Order {
 		this.orderItems.add(orderItem);
 		this.totalPrice += orderItem.getSubtotal();
 	}
+
+	public boolean isCanceled() {
+		return this.status == OrderStatus.CANCELED;
+	}
+
+	/** 이미 취소된 주문인지 여부는 호출 전 Service 계층에서 확인한다고 가정한다. */
+	public void cancel() {
+		this.status = OrderStatus.CANCELED;
+	}
 }

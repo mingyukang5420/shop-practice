@@ -1,8 +1,9 @@
 package com.skala.shop.domain.order;
 
-/** MVP는 취소 기능이 없어 주문완료 단일 상태만 존재한다(기능명세서 4.1). */
+/** 주문완료/주문취소 두 상태를 가진다(기능명세서 4.4). */
 public enum OrderStatus {
-	ORDERED("주문완료");
+	ORDERED("주문완료"),
+	CANCELED("주문취소");
 
 	private final String displayName;
 

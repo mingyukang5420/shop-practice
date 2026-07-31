@@ -53,7 +53,8 @@ public class CartController {
 			@ApiResponse(responseCode = "201", description = "담기 성공"),
 			@ApiResponse(responseCode = "401", description = "미인증", content = @Content(
 					mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class),
-					examples = @ExampleObject(value = UNAUTHORIZED_EXAMPLE))),
+					examples = @ExampleObject(value = """
+							{"timestamp":"2026-07-31T09:00:00","status":401,"code":"UNAUTHORIZED","message":"로그인이 필요합니다.","path":"/api/cart/items"}"""))),
 			@ApiResponse(responseCode = "404", description = "존재하지 않는 도서"),
 			@ApiResponse(responseCode = "409", description = "요청(합산) 수량이 재고 초과", content = @Content(
 					mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ErrorResponse.class),

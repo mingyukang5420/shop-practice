@@ -21,6 +21,7 @@ class BookServiceTest {
 	@Autowired
 	private BookService bookService;
 
+	// 존재하지 않는 도서 id로 조회하면 BOOK_NOT_FOUND 예외가 발생하는지 검증한다.
 	@Test
 	void 존재하지_않는_도서_조회시_BOOK_NOT_FOUND를_던진다() {
 		assertThatThrownBy(() -> bookService.findById(9999L))
@@ -28,6 +29,7 @@ class BookServiceTest {
 				.satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(ErrorCode.BOOK_NOT_FOUND));
 	}
 
+	// 존재하지 않는 categoryId로 도서를 등록하면 CATEGORY_NOT_FOUND 예외가 발생하는지 검증한다.
 	@Test
 	void 존재하지_않는_categoryId로_등록시_CATEGORY_NOT_FOUND를_던진다() {
 		BookRequest request = new BookRequest("제목", "저자", 9999L, 10000, 5, "설명");
@@ -37,6 +39,7 @@ class BookServiceTest {
 				.satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(ErrorCode.CATEGORY_NOT_FOUND));
 	}
 
+	// 도서 등록→조회→수정→삭제 전체 흐름이 정상 동작하고, 삭제 후에는 조회가 실패하는지 검증한다.
 	@Test
 	void 도서를_등록_조회_수정_삭제할_수_있다() {
 		BookRequest createRequest = new BookRequest("테스트 도서", "테스트 저자", 1L, 20000, 3, "설명");
@@ -56,6 +59,7 @@ class BookServiceTest {
 		assertThatThrownBy(() -> bookService.findById(created.id())).isInstanceOf(BusinessException.class);
 	}
 
+	// 존재하지 않는 categoryId로 목록을 조회하면 빈 목록이 반환되는지 검증한다.
 	@Test
 	void 존재하지_않는_categoryId로_필터링하면_빈_목록을_반환한다() {
 		var result = bookService.findAll(null, 9999L, PageRequest.of(0, 10));

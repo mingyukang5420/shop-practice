@@ -10,6 +10,8 @@ import org.springframework.data.domain.PageRequest;
 
 class PageResponseTest {
 
+	// Spring Data의 Page 객체를 프로젝트 공통 페이징 응답(PageResponse)으로 변환할 때
+	// content/page/size/totalElements/totalPages가 모두 올바르게 매핑되는지 검증한다.
 	@Test
 	void Spring_Data_Page를_공통_페이징_응답_포맷으로_변환한다() {
 		var page = new PageImpl<>(List.of("클린 코드", "칼리의 노래"), PageRequest.of(0, 2), 5);

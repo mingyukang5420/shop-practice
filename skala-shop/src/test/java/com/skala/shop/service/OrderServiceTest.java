@@ -45,6 +45,7 @@ class OrderServiceTest {
 	@Autowired
 	private MemberRepository memberRepository;
 
+	// 주문할 장바구니 항목이 없으면 INVALID_REQUEST 예외가 발생하는지 검증한다.
 	@Test
 	void 대상이_없으면_INVALID_REQUEST를_던진다() {
 		assertThatThrownBy(() -> orderService.createOrder(MEMBER_ID, null))
@@ -52,6 +53,8 @@ class OrderServiceTest {
 				.satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(ErrorCode.INVALID_REQUEST));
 	}
 
+	// 장바구니 전체를 주문하면 재고 차감, 주문 항목 스냅샷 저장, 장바구니 비우기가
+	// 한 번에 정상적으로 처리되는지 검증한다.
 	@Test
 	void 장바구니_전체를_주문하면_재고차감_스냅샷저장_장바구니삭제가_모두_일어난다() {
 		cartService.add(MEMBER_ID, new CartItemAddRequest(1L, 2)); // 클린 코드, 재고 20
@@ -67,6 +70,8 @@ class OrderServiceTest {
 		assertThat(cartService.findMyCart(MEMBER_ID).items()).isEmpty();
 	}
 
+	// 여러 항목 중 재고가 부족한 항목이 하나라도 있으면, 다른 항목도 포함해 아무것도
+	// 반영되지 않고 트랜잭션 전체가 롤백되는지 검증한다.
 	@Test
 	void 재고가_부족한_항목이_하나라도_있으면_아무것도_반영하지_않고_전체_실패한다() {
 		cartService.add(MEMBER_ID, new CartItemAddRequest(1L, 2)); // 클린 코드, 재고 20, 충분
@@ -81,11 +86,12 @@ class OrderServiceTest {
 				.isInstanceOf(BusinessException.class)
 				.satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(ErrorCode.INSUFFICIENT_STOCK));
 
-		// 전량 실패 시 어떤 항목도 반영되지 않아야 한다(기능명세서 5.1~5.3).
+		// 전량 실패 시 어떤 항목도 반영되지 않아야 한다.
 		assertThat(bookRepository.findById(1L).orElseThrow().getStock()).isEqualTo(20);
 		assertThat(cartItemRepository.findAllByMember(member)).hasSize(2);
 	}
 
+	// cartItemIds를 지정하면 장바구니 전체가 아니라 지정한 항목만 주문으로 전환되는지 검증한다.
 	@Test
 	void cartItemIds로_일부만_주문할_수_있다() {
 		CartItemResponse target = cartService.add(MEMBER_ID, new CartItemAddRequest(1L, 1));
@@ -98,6 +104,7 @@ class OrderServiceTest {
 		assertThat(cartService.findMyCart(MEMBER_ID).items()).hasSize(1);
 	}
 
+	// 요청에 존재하지 않는 cartItemId가 섞여 있으면 INVALID_REQUEST 예외가 발생하는지 검증한다.
 	@Test
 	void 존재하지_않는_cartItemId가_섞이면_INVALID_REQUEST를_던진다() {
 		assertThatThrownBy(() -> orderService.createOrder(MEMBER_ID, new OrderCreateRequest(List.of(9999L))))
@@ -105,6 +112,7 @@ class OrderServiceTest {
 				.satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(ErrorCode.INVALID_REQUEST));
 	}
 
+	// 존재하지 않는 주문을 조회하면 ORDER_NOT_FOUND 예외가 발생하는지 검증한다.
 	@Test
 	void 존재하지_않는_주문_조회시_ORDER_NOT_FOUND를_던진다() {
 		assertThatThrownBy(() -> orderService.findMyOrder(MEMBER_ID, 9999L))
@@ -112,6 +120,7 @@ class OrderServiceTest {
 				.satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(ErrorCode.ORDER_NOT_FOUND));
 	}
 
+	// 생성한 주문이 목록 조회와 상세 조회 모두에서 정상적으로 조회되는지 검증한다.
 	@Test
 	void 주문_목록과_상세를_조회할_수_있다() {
 		cartService.add(MEMBER_ID, new CartItemAddRequest(1L, 1));
@@ -123,6 +132,8 @@ class OrderServiceTest {
 		assertThat(orderService.findMyOrder(MEMBER_ID, created.orderId()).orderId()).isEqualTo(created.orderId());
 	}
 
+	// 재고는 충분하지만 보유 포인트가 부족하면 INSUFFICIENT_POINT 예외가 발생하고,
+	// 재고/포인트 모두 변경되지 않는지 검증한다.
 	@Test
 	void 재고는_충분해도_보유_포인트가_부족하면_INSUFFICIENT_POINT를_던지고_아무것도_반영하지_않는다() {
 		// 클린 코드(id=1, 30000원 x 재고20 = 600,000원) + 이펙티브 자바(id=2, 36000원 x 재고15 = 540,000원)
@@ -139,6 +150,8 @@ class OrderServiceTest {
 		assertThat(memberRepository.findById(MEMBER_ID).orElseThrow().getPoint()).isEqualTo(1_000_000);
 	}
 
+	// 주문을 취소하면 재고가 원래대로 복구되고, 포인트가 환급되며,
+	// 주문 상태가 주문취소로 바뀌는지 검증한다.
 	@Test
 	void 주문을_취소하면_재고가_복구되고_포인트가_환급되며_상태가_주문취소로_바뀐다() {
 		cartService.add(MEMBER_ID, new CartItemAddRequest(1L, 2)); // 클린 코드 2권, 60000원
@@ -153,6 +166,7 @@ class OrderServiceTest {
 		assertThat(memberRepository.findById(MEMBER_ID).orElseThrow().getPoint()).isEqualTo(1_000_000);
 	}
 
+	// 이미 취소된 주문을 다시 취소하려 하면 ORDER_ALREADY_CANCELED 예외가 발생하는지 검증한다.
 	@Test
 	void 이미_취소된_주문을_다시_취소하면_ORDER_ALREADY_CANCELED를_던진다() {
 		cartService.add(MEMBER_ID, new CartItemAddRequest(1L, 1));
@@ -164,6 +178,7 @@ class OrderServiceTest {
 				.satisfies(e -> assertThat(((BusinessException) e).getErrorCode()).isEqualTo(ErrorCode.ORDER_ALREADY_CANCELED));
 	}
 
+	// 존재하지 않거나 다른 회원 소유의 주문을 취소하려 하면 ORDER_NOT_FOUND 예외가 발생하는지 검증한다.
 	@Test
 	void 존재하지_않거나_본인_소유가_아닌_주문_취소시_ORDER_NOT_FOUND를_던진다() {
 		assertThatThrownBy(() -> orderService.cancelOrder(MEMBER_ID, 9999L))

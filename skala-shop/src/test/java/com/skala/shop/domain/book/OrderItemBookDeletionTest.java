@@ -19,6 +19,8 @@ class OrderItemBookDeletionTest {
 	@Autowired
 	private jakarta.persistence.EntityManager em;
 
+	// Book이 삭제된 이후에도 OrderItem의 title/price 스냅샷은 그대로 남고,
+	// book 참조만 NULL로 바뀌는지(ON DELETE SET NULL) 검증한다.
 	@Test
 	void orderItem은_주문시점_스냅샷을_유지하고_book이_삭제되면_참조만_NULL이_된다() {
 		Member member = new Member("test-login", "encoded-placeholder", "더미 회원", 1_000_000);

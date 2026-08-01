@@ -23,6 +23,8 @@ class OrderRepositorySortTest {
 	@Autowired
 	private OrderRepository orderRepository;
 
+	// 존재하지 않는 필드명으로 정렬을 요청하면 Spring Data가 PropertyReferenceException을
+	// 던지는지 검증한다(GlobalExceptionHandler가 이를 400으로 변환하는 전제 조건).
 	@Test
 	void 존재하지_않는_필드로_정렬하면_PropertyReferenceException을_던진다() {
 		assertThatThrownBy(() -> orderRepository.findAll(PageRequest.of(0, 10, Sort.by("nonexistent"))))

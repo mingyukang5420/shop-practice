@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 
-/** 등록(POST)과 수정(PUT)이 동일한 스키마를 사용한다(API명세서 2절). */
+/** 등록(POST)과 수정(PUT)이 동일한 스키마를 사용한다. */
 public record BookRequest(
 	@NotBlank(message = "제목은 필수입니다.")
 	@Schema(example = "클린 코드")

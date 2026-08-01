@@ -40,7 +40,7 @@ public class CartService {
 		this.memberRepository = memberRepository;
 	}
 
-	/** 동일 도서 재담기 시 신규 행 대신 수량을 합산하고, 합산된 총수량 기준으로 재고를 검증한다(기능명세서 3.1). */
+	/** 동일 도서 재담기 시 신규 행 대신 수량을 합산하고, 합산된 총수량 기준으로 재고를 검증한다. */
 	@Transactional
 	public CartItemResponse add(Long memberId, CartItemAddRequest request) {
 		Member member = getMember(memberId);
@@ -61,7 +61,7 @@ public class CartService {
 		return toResponse(cartItem, book);
 	}
 
-	/** price/stock은 스냅샷이 아니라 항상 최신 Book 값을 조회해 반환한다(기능명세서 3.2). */
+	/** price/stock은 스냅샷이 아니라 항상 최신 Book 값을 조회해 반환한다. */
 	public CartResponse findMyCart(Long memberId) {
 		Member member = getMember(memberId);
 		List<CartItemResponse> items = cartItemRepository.findAllByMember(member).stream()

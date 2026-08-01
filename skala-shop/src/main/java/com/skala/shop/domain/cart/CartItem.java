@@ -43,7 +43,7 @@ public class CartItem {
 		this.quantity = quantity;
 	}
 
-	/** 동일 도서 재담기 시 수량 합산 규칙(기능명세서 3.1)에 사용. */
+	/** 동일 도서 재담기 시 수량 합산 규칙에 사용. */
 	public void increaseQuantity(int amount) {
 		this.quantity += amount;
 	}

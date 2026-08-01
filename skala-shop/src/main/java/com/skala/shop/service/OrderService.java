@@ -45,9 +45,9 @@ public class OrderService {
 	}
 
 	/**
-	 * 재고 초과 주문 방지 3단계(담기→수정→주문생성) 중 마지막 검증 지점이다(기능명세서 5.1~5.3).
+	 * 재고 초과 주문 방지 3단계(담기→수정→주문생성) 중 마지막 검증 지점이다.
 	 * 재고와 포인트를 모두 먼저 검증한 뒤에만 반영하므로, 하나라도 부족하면 어떤 것도 반영되지 않고
-	 * 트랜잭션 전체가 롤백된다(TOCTOU 대응 재검증 + 포인트 검증, 기능명세서 4.1).
+	 * 트랜잭션 전체가 롤백된다(TOCTOU 대응 재검증 + 포인트 검증).
 	 */
 	@Transactional
 	public OrderResponse createOrder(Long memberId, OrderCreateRequest request) {
@@ -95,7 +95,7 @@ public class OrderService {
 	}
 
 	/**
-	 * 주문 전체를 취소한다(항목 단위 부분 취소는 지원하지 않음, 기능명세서 4.4).
+	 * 주문 전체를 취소한다(항목 단위 부분 취소는 지원하지 않음).
 	 * 삭제된 도서(FK가 NULL인 OrderItem)는 재고 복구 대상에서 제외한다.
 	 */
 	@Transactional
@@ -119,7 +119,7 @@ public class OrderService {
 		return toResponse(order);
 	}
 
-	/** 관리자 조회는 회원 필터 없이 전체 주문을 대상으로 한다(API명세서 5절, 기능명세서 4.3). */
+	/** 관리자 조회는 회원 필터 없이 전체 주문을 대상으로 한다. */
 	public PageResponse<OrderSummaryResponse> findAllOrders(Pageable pageable) {
 		return PageResponse.from(orderRepository.findAll(pageable).map(OrderSummaryResponse::from));
 	}
@@ -130,7 +130,7 @@ public class OrderService {
 		return toResponse(order);
 	}
 
-	/** cartItemIds 미지정 시 장바구니 전체, 지정 시 본인 소유 항목인지 확인한다(기능명세서 4.1). */
+	/** cartItemIds 미지정 시 장바구니 전체, 지정 시 본인 소유 항목인지 확인한다. */
 	private List<CartItem> resolveTargets(Member member, OrderCreateRequest request) {
 		if (request == null || request.cartItemIds() == null) {
 			return cartItemRepository.findAllByMember(member);

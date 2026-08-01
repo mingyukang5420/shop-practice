@@ -18,7 +18,7 @@ public class BusinessException extends RuntimeException {
 		return errorCode;
 	}
 
-	/** 도서명/요청수량/가용재고를 메시지에 포함한 INSUFFICIENT_STOCK 예외를 만든다(API명세서 7.1). */
+	/** 도서명/요청수량/가용재고를 메시지에 포함한 INSUFFICIENT_STOCK 예외를 만든다. */
 	public static BusinessException insufficientStock(String bookTitle, int requestedQuantity, int availableStock) {
 		String message = "요청하신 수량이 재고를 초과합니다. (도서: %s, 요청 수량: %d, 가용 재고: %d)"
 				.formatted(bookTitle, requestedQuantity, availableStock);

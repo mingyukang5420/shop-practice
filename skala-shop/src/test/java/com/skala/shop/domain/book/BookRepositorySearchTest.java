@@ -38,6 +38,7 @@ class BookRepositorySearchTest {
 		em.flush();
 	}
 
+	// keyword/categoryId를 둘 다 주지 않으면 전체 도서가 조회되는지 검증한다.
 	@Test
 	void keyword와_categoryId가_모두_없으면_전체_도서를_반환한다() {
 		var result = bookRepository.search(null, null, PageRequest.of(0, 10));
@@ -45,6 +46,7 @@ class BookRepositorySearchTest {
 		assertThat(result.getTotalElements()).isEqualTo(3);
 	}
 
+	// keyword가 title/author 어느 쪽에 있든, 대소문자 구분 없이 부분일치로 검색되는지 검증한다.
 	@Test
 	void keyword는_title과_author에_대소문자_무관_부분일치한다() {
 		var byTitle = bookRepository.search("코드", null, PageRequest.of(0, 10));
@@ -54,6 +56,7 @@ class BookRepositorySearchTest {
 		assertThat(byAuthor.getContent()).extracting(Book::getTitle).containsExactly("여행의 이유");
 	}
 
+	// categoryId만 지정하면 해당 카테고리의 도서만 필터링되는지 검증한다.
 	@Test
 	void categoryId만_있으면_해당_카테고리로만_필터링한다() {
 		var result = bookRepository.search(null, novel.getId(), PageRequest.of(0, 10));
@@ -61,6 +64,7 @@ class BookRepositorySearchTest {
 		assertThat(result.getTotalElements()).isEqualTo(2);
 	}
 
+	// keyword와 categoryId를 함께 지정하면 두 조건이 AND로 결합되는지 검증한다.
 	@Test
 	void keyword와_categoryId를_함께_주면_AND로_결합한다() {
 		var result = bookRepository.search("킹", novel.getId(), PageRequest.of(0, 10));
@@ -68,6 +72,7 @@ class BookRepositorySearchTest {
 		assertThat(result.getContent()).extracting(Book::getTitle).containsExactly("칼리의 노래");
 	}
 
+	// 존재하지 않는 categoryId로 필터링해도 예외 없이 빈 목록이 반환되는지 검증한다.
 	@Test
 	void 존재하지_않는_categoryId는_에러_없이_빈_목록을_반환한다() {
 		var result = bookRepository.search(null, 9999L, PageRequest.of(0, 10));

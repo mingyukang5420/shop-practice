@@ -8,7 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface BookRepository extends JpaRepository<Book, Long> {
 
-	/** keyword(title/author 부분일치, 대소문자 무관)와 categoryId는 각각 독립적으로 선택 가능하다(기능명세서 2.1). */
+	/** keyword(title/author 부분일치, 대소문자 무관)와 categoryId는 각각 독립적으로 선택 가능하다. */
 	@Query("SELECT b FROM Book b WHERE "
 			+ "(:keyword IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(b.author) LIKE LOWER(CONCAT('%', :keyword, '%'))) "
 			+ "AND (:categoryId IS NULL OR b.category.id = :categoryId)")

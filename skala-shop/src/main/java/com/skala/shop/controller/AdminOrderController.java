@@ -25,9 +25,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
- * 회원 필터 없이 전체 주문을 조회한다. 세션 인증이 도입된 이후에도(v1.1) 이 엔드포인트는
+ * 회원 필터 없이 전체 주문을 조회한다. 세션 인증이 도입된 이후에도 이 엔드포인트는
  * 그대로 인증 없이 공개 상태를 유지하며, 추후 관리자 권한 체계 도입 시 이 컨트롤러에만
- * ADMIN 권한 검사를 추가할 수 있도록 엔드포인트를 분리해두었다(기능명세서 4.3).
+ * ADMIN 권한 검사를 추가할 수 있도록 엔드포인트를 분리해두었다.
  */
 @Tag(name = "Admin API", description = "전체 주문 목록/상세 조회(회원 필터 없음). 인증 없이 공개된다.")
 @RestController

@@ -18,7 +18,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** title/price는 주문 시점 스냅샷이라 이후 Book이 수정·삭제되어도 과거 주문 내역이 변하지 않는다(기능명세서 2.5, 4.1). */
+/** title/price는 주문 시점 스냅샷이라 이후 Book이 수정·삭제되어도 과거 주문 내역이 변하지 않는다. */
 @Entity
 @Table(name = "order_items")
 @Getter

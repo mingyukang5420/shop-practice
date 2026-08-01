@@ -64,7 +64,7 @@ public class BookService {
 		return BookResponse.from(book);
 	}
 
-	/** 이미 주문된 도서도 삭제 가능하며, OrderItem의 스냅샷은 Book FK의 ON DELETE SET NULL로 보존된다(기능명세서 2.5). */
+	/** 이미 주문된 도서도 삭제 가능하며, OrderItem의 스냅샷은 Book FK의 ON DELETE SET NULL로 보존된다. */
 	@Transactional
 	public void delete(Long id) {
 		Book book = getBook(id);

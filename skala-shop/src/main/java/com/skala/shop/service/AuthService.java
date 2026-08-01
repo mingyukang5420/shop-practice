@@ -27,7 +27,7 @@ public class AuthService {
 	/** 로그인한 회원 id를 세션에 저장할 때 쓰는 attribute 키. JWT 대신 세션(쿠키) 기반으로 로그인 상태를 유지한다. */
 	public static final String SESSION_MEMBER_ID = "MEMBER_ID";
 
-	/** 회원가입 시 지급되는 초기 포인트(0731-practice.pdf 실습 시나리오와 동일한 값). */
+	/** 회원가입 시 지급되는 초기 포인트(예치금). */
 	private static final int INITIAL_POINT = 1_000_000;
 
 	private final MemberRepository memberRepository;
